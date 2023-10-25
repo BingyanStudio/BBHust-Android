@@ -1,0 +1,49 @@
+mutation UpdatePost($input:UpdatePostInput!){
+    updatePost(input:$input){
+        success
+    }
+}
+
+mutation DeletePost($input:DeletePostInput!){
+    deletePost(input:$input){
+        success
+    }
+}
+mutation LikePost($input:LikePostInput!){
+    likePost(input:$input){
+        success
+    }
+}
+mutation FavoritePost($input:FavoritePostInput!){
+    favoritePost(input:$input){
+        success
+    }
+}
+mutation AddReply($input:AddReplyInput!){
+    addReply(input:$input){
+        id
+    }
+}
+
+mutation UpdateReply($input:UpdateReplyInput!){
+    updateReply(input:$input){
+        success
+    }
+}
+
+mutation DeleteReply($input:DeleteReplyInput!){
+    deleteReply(input:$input){
+        success
+    }
+}
+
+mutation AddReport($input:AddReportInput!){
+    addReport(input:$input){
+        id
+    }
+}
+mutation LikeReply($input:LikeReplyInput!){
+    likeReply(input:$input){
+        success
+    }
+}

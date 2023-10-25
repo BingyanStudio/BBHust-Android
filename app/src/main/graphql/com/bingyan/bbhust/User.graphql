@@ -1,0 +1,81 @@
+mutation Login($input:LoginInput!){
+    login(input:$input){
+        id
+        token
+        expire
+        permission
+    }
+}
+mutation Register($input:RegisterInput!){
+    register(input:$input){
+        id
+    }
+}
+mutation ChangePassword($input:ChangePasswordInput!){
+    changePassword(input:$input){
+        success
+    }
+}
+mutation SetPhone($input:SetPhoneInput!){
+    setPhone(input:$input){
+        success
+    }
+}
+mutation SendPhoneCode($input:SendPhoneCodeInput!){
+    sendPhoneCode(input:$input){
+        success
+    }
+}
+mutation SendEmailCode($input:SendEmailCodeInput!){
+    sendEmailCode(input:$input){
+        success
+    }
+}
+mutation CheckUsername($input:CheckUsernameInput!){
+    checkUsername(input:$input){
+        occupied
+    }
+}
+mutation CheckPersonId($input:CheckPersonIDInput!){
+    checkPersonID(input:$input){
+        occupied
+    }
+}
+mutation CheckPhone($input:CheckPhoneInput!){
+    checkPhone(input:$input){
+        occupied
+    }
+}
+
+mutation UpdateUser($input:UpdateUserInput!){
+    updateUser(input:$input){
+        success
+    }
+}
+
+mutation FollowUser($input:FollowUserInput!){
+    followUser(input:$input){
+        success
+    }
+}
+
+query CurrentUser{
+    currentUser {
+        id
+        username
+        avatar
+        user_count {
+            post_count
+            following_count
+            followed_count
+            replied_count
+            liked_count
+        }
+        create_time
+        account_info {
+            person_id
+            is_alumni
+            phone
+        }
+    }
+}

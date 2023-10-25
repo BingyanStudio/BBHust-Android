@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.bingyan.bbhust.App
-import com.bingyan.bbhust.LocalImageViewer
+import com.bingyan.bbhust.ui.provider.LocalGalley
 import com.bingyan.bbhust.ui.theme.DarkColorPalette
 import com.bingyan.bbhust.ui.theme.colors
 import kotlinx.coroutines.delay
@@ -72,7 +72,7 @@ fun MarkdownView(
                 }
             }
     ) {
-        val imageViewerManger = LocalImageViewer.current
+        val imageViewerManger = LocalGalley.current
         val uriHandler = LocalUriHandler.current
         AndroidView(factory = { WebViewProvider(it, imageViewerManger, uriHandler).web }) { web ->
             if (data.value.hashCode() != lastCode.value && data.value.isNotBlank()) {

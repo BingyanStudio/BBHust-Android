@@ -1,0 +1,928 @@
+# This file was generated. Do not edit manually.
+
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+"权限控制，-1游客，0登陆用户，1管理员，参数r是role，角色"
+directive @auth(r: Role!) on OBJECT | FIELD_DEFINITION
+
+"The @defer directive may be specified on a fragment spread to imply de-prioritization, that causes the fragment to be omitted in the initial response, and delivered as a subsequent response afterward. A query with @defer directive will cause the request to potentially return multiple responses, where non-deferred data is delivered in the initial response and data deferred delivered in a subsequent response. @include and @skip take precedence over @defer."
+directive @defer(if: Boolean = true, label: String) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+"代码生成时强制单独resolver"
+directive @goField(forceResolver: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+"代码生成时绑定类型"
+directive @goModel(model: String, models: [String!]) on SCALAR | OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT
+
+union MessageRefer = Post | Reply
+
+union SearchResult = Post | User
+
+"[user] 账号信息，只能查自己的"
+type Account {
+    "是否为校友/已毕业"
+    is_alumni: Boolean!
+    "学号/人事编号"
+    person_id: String!
+    "电话"
+    phone: String!
+}
+
+type AddBannerPayload {
+    id: ID!
+    success: Boolean!
+}
+
+type AddMobileAppInfoPayload {
+    success: Boolean!
+}
+
+type AddPostPayload {
+    id: ID!
+}
+
+type AddReplyPayload {
+    id: ID!
+}
+
+type AddReportPayload {
+    id: ID!
+}
+
+type BanUserPayload {
+    success: Boolean!
+}
+
+"Banner"
+type Banner {
+    "安卓App点击后跳转的URL"
+    android_target_url: String!
+    "展示的结束时间"
+    end_time: DateTime!
+    "ID"
+    id: ID!
+    "图片的URL"
+    image_url: String!
+    "iOS App点击后跳转的URL"
+    ios_target_url: String!
+    "名称"
+    name: String!
+    "展示优先级，小的优先级更高"
+    priority: Int!
+    "展示的开始时间"
+    start_time: DateTime!
+    "点击后跳转的URL"
+    target_url: String!
+    "微信小程序点击后跳转的URL"
+    wx_target_url: String!
+}
+
+type BindWechatPayload {
+    success: Boolean!
+}
+
+"帖子分类"
+type Category {
+    "分类讨论数量 (帖子+回复)"
+    argue_count: Int!
+    "描述"
+    desc: String!
+    "热度"
+    hot_value: Int!
+    "分类ID"
+    id: String!
+    "分类名称"
+    name: String!
+    "分类的帖子"
+    posts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+    "分类阅读数量"
+    read_count: Int!
+}
+
+type ChangePasswordPayload {
+    success: Boolean!
+}
+
+type CheckPersonIDPayload {
+    occupied: Boolean!
+}
+
+type CheckPhonePayload {
+    occupied: Boolean!
+}
+
+type CheckUsernamePayload {
+    occupied: Boolean!
+}
+
+type DeleteAccountPayload {
+    success: Boolean!
+}
+
+type DeleteBannerPayload {
+    success: Boolean!
+}
+
+type DeletePostPayload {
+    success: Boolean!
+}
+
+type DeleteReplyPayload {
+    success: Boolean!
+}
+
+type FavoritePostPayload {
+    success: Boolean!
+}
+
+type FollowUserPayload {
+    success: Boolean!
+}
+
+type GetBannerUploadTokenPayload {
+    "相对路径"
+    resource_key: String!
+    "上传凭证"
+    token: String!
+    "URL"
+    url: String!
+}
+
+type GetMobileAppUploadTokenPayload {
+    "相对路径"
+    resource_key: String!
+    "上传凭证"
+    token: String!
+    "URL"
+    url: String!
+}
+
+type GetUploadTokenPayload {
+    "图片相对路径"
+    resource_key: String!
+    "上传凭证"
+    token: String!
+    "图片URL"
+    url: String!
+}
+
+type GetWechatJsSignaturePayload {
+    app_id: String!
+    nonceStr: String!
+    signature: String!
+    timestamp: DateTime!
+    url: String!
+}
+
+type LikePostPayload {
+    success: Boolean!
+}
+
+type LikeReplyPayload {
+    success: Boolean!
+}
+
+type LoginPayload {
+    expire: DateTime!
+    id: ID!
+    permission: Int!
+    token: String!
+}
+
+"消息信息"
+type Message {
+    "内容"
+    content: String!
+    "消息ID"
+    id: ID!
+    "已读"
+    read: Boolean!
+    "来源 LIKE/AT为Post, COMMENT/REPLY/LIKE_REPLY为Reply"
+    refer: MessageRefer
+    "发送者"
+    sender: User
+    "时间"
+    time: DateTime!
+    "标题"
+    title: String!
+    "消息类型"
+    type: MessageType!
+}
+
+type MessageCount {
+    count: Int!
+}
+
+type MobileAppInfo {
+    dex: String!
+    sign: String!
+    update_log: String!
+    url: String!
+    version: String!
+    version_code: Int!
+}
+
+"""
+
+API 说明：
+- 未标注的可以直接调用
+- [visitor]: 需要游客以上权限 @auth(r: VISITOR)
+- [user]: 需要用户以上权限 @auth(r: USER)
+- [admin]: 需要管理员以上权限 @auth(r: ADMIN)
+可以通过 status 查询当前角色权限
+"""
+type Mutation {
+    "[admin] 添加banner"
+    addBanner(input: AddBannerInput!): AddBannerPayload!
+    "[admin] 添加安卓app信息"
+    addMobileAppInfo(input: AddMobileAppInfoInput!): AddMobileAppInfoPayload!
+    "[user] 新建帖子"
+    addPost(input: AddPostInput!): AddPostPayload!
+    "[user] 新建回复"
+    addReply(input: AddReplyInput!): AddReplyPayload!
+    "[user] 新建举报 残废状态"
+    addReport(input: AddReportInput!): AddReportPayload
+    "[admin] 禁用账号"
+    banUser(input: BanUserInput!): BanUserPayload
+    "[user] 小程序绑定微信"
+    bindWechat(input: BindWechatInput!): BindWechatPayload!
+    "修改密码"
+    changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
+    "检查学号/人事编号是否被占用"
+    checkPersonID(input: CheckPersonIDInput!): CheckPersonIDPayload!
+    "检查手机号是否被占用"
+    checkPhone(input: CheckPhoneInput!): CheckPhonePayload!
+    "检查用户名是否被占用"
+    checkUsername(input: CheckUsernameInput!): CheckUsernamePayload!
+    "[user] 注销账号"
+    deleteAccount(input: DeleteAccountInput!): DeleteAccountPayload!
+    "[admin] 删除banner"
+    deleteBanner(input: DeleteBannerInput!): DeleteBannerPayload!
+    "[user] 删除帖子"
+    deletePost(input: DeletePostInput!): DeletePostPayload!
+    "[user] 删除回复"
+    deleteReply(input: DeleteReplyInput!): DeleteReplyPayload!
+    "[user] 收藏 目前是个残废"
+    favoritePost(input: FavoritePostInput!): FavoritePostPayload!
+    "[user] 关注/取关用户"
+    followUser(input: FollowUserInput!): FollowUserPayload
+    "[admin] 获取banner图片上传凭证"
+    getBannerUploadToken(input: GetBannerUploadTokenInput!): GetBannerUploadTokenPayload!
+    "[admin] 获取app上传凭证"
+    getMobileAppUploadToken(input: GetMobileAppUploadTokenInput!): GetMobileAppUploadTokenPayload!
+    "[user] 获取图片上传凭证"
+    getUploadToken(input: GetUploadTokenInput!): GetUploadTokenPayload!
+    "获取微信js签名"
+    getWechatJsSignature(input: GetWechatJsSignatureInput!): GetWechatJsSignaturePayload!
+    "[user] 点赞"
+    likePost(input: LikePostInput!): LikePostPayload!
+    "[user] 点赞"
+    likeReply(input: LikeReplyInput!): LikeReplyPayload!
+    "登录"
+    login(input: LoginInput!): LoginPayload!
+    "登录 使用手机验证码"
+    loginByPhone(input: LoginByPhoneInput!): LoginPayload!
+    "登录"
+    loginByWechat(input: LoginByWechat!): LoginPayload!
+    "[admin] 处理举报 残废状态"
+    processReport(input: ProcessReportInput!): ProcessReportPayload
+    "[user] 修改消息为已读"
+    readMessage(input: ReadMessageInput!): ReadMessagePayload!
+    "[user] 修改某类型/所有类型的所有消息为已读"
+    readMessages(input: ReadMessagesInput): ReadMessagesPayload!
+    "[user] [用了新的方法记录，不需要了] 记录帖子已读 "
+    readPost(input: ReadPostInput!): ReadPostPayload! @deprecated(reason: "已废弃")
+    "注册"
+    register(input: RegisterInput!): RegisterPayload!
+    "注册 使用手机号"
+    registerByPhone(input: RegisterByPhoneInput!): RegisterPayload!
+    "发送邮箱验证码"
+    sendEmailCode(input: SendEmailCodeInput!): SendCodePayload!
+    "发送手机验证码"
+    sendPhoneCode(input: SendPhoneCodeInput!): SendCodePayload!
+    "[user] 绑定校园邮箱"
+    setPersonID(input: SetPersonIDInput!): SetPersonIDPayload!
+    "[user] 绑定手机号"
+    setPhone(input: SetPhoneInput!): SetPhonePayload!
+    "[admin] 根据version_code更新安卓app信息"
+    updateMobileAppInfo(input: UpdateMobileAppInfoInput!): UpdateMobileAppInfoPayload!
+    "[user] 更新帖子"
+    updatePost(input: UpdatePostInput!): UpdatePostPayload!
+    "[admin] 修改帖子可见性"
+    updatePostVisibility(input: UpdatePostVisibilityInput!): UpdatePostVisibilityPayload
+    "[user] 更新回复"
+    updateReply(input: UpdateReplyInput!): UpdateReplyPayload!
+    "[user] 更新用户信息"
+    updateUser(input: UpdateUserInput!): UpdateUserPayload
+}
+
+type PageInfo {
+    end_time: DateTime!
+    has_next_page: Boolean!
+    start_time: DateTime!
+}
+
+"帖子信息"
+type Post {
+    "作者"
+    author: User!
+    "分类"
+    category: [Category!]!
+    "正文"
+    content: String!
+    "摘要"
+    digest: String!
+    "是否已收藏 未登录返回false"
+    favorite: Boolean!
+    "是否隐藏/仅自己可见"
+    hide: Boolean!
+    "是否为精华"
+    highlight: Boolean!
+    "热门回复"
+    hot_reply(limit: Int! = 5, skip: Int! = 0): [Reply!]!
+    "热度"
+    hot_value: Int!
+    "帖子ID"
+    id: ID!
+    "图片"
+    images: [String!]!
+    "点赞数"
+    like_count: Int!
+    "是否已赞 未登录返回false"
+    liked: Boolean!
+    "阅读量"
+    read_count: Int!
+    "回复"
+    reply(limit: Int! = 300, sort: Int! = 1, time: DateTime! = 0): [Reply!]!
+    "回复数(含一级和二级回复)"
+    reply_count: Int!
+    "最后回复时间"
+    reply_time: DateTime!
+    "发帖时间"
+    time: DateTime!
+    "标题"
+    title: String!
+    "话题"
+    topic: Topic!
+    "新话题"
+    topic2: [Topic2!]!
+    "最后更新时间"
+    update_time: DateTime!
+    "[admin] 可见性，0为公开，1为仅自己可见"
+    visibility: Int!
+}
+
+type PostConnection {
+    nodes: [Post!]!
+    pageInfo: PageInfo!
+}
+
+type ProcessReportPayload {
+    success: Boolean!
+}
+
+"""
+
+API 说明：
+- 未标注的可以直接调用
+- [visitor]: 需要游客以上权限 @auth(r: VISITOR)
+- [user]: 需要用户以上权限 @auth(r: USER)
+- [admin]: 需要管理员以上权限 @auth(r: ADMIN)
+可以通过 status 查询当前角色权限
+"""
+type Query {
+    "[visitor] 查询banner, 参数为空时获取当前展示的banner, 返回结果已按优先级排序"
+    banners(endTime: DateTime, startTime: DateTime): [Banner!]!
+    "[visitor] 查询所有帖子分类"
+    categories: [Category!]!
+    "[visitor] 按ID查询帖子分类信息"
+    category(id: ID!): Category!
+    "[user] 当前登录用户信息"
+    currentUser: User!
+    "[user] 关注用户的帖子"
+    followingPosts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+    "[visitor] 获取精华帖子列表，随机获取"
+    highlightPosts(limit: Int! = 1): [Post!]!
+    "[visitor] 获取热门帖子列表(前20)"
+    hotPosts: [Post!]!
+    "[visitor] 查询话题列表，热门"
+    hotTopics2(limit: Int! = 6): [Topic2!]!
+    "[visitor] 按帖子查询热门回复"
+    hot_reply(limit: Int! = 5, post: ID!, skip: Int! = 0): [Reply!]!
+    "[admin] 获取不可见帖子"
+    invisiblePosts(limit: Int! = 10, time: DateTime! = 2145888000, visibility: Int! = 1): [Post!]!
+    "[user] 按ID查询消息"
+    message(id: ID!): Message!
+    "[user] 消息列表"
+    messages(limit: Int! = 10, read: Boolean, skip: Int! = 0, type: MessageType): [Message!]!
+    "获取安卓app信息 默认或指定版本不存在时查询最新版本"
+    mobileAppInfo(version_code: Int): MobileAppInfo!
+    "获取所有安卓app信息"
+    mobileAppInfos(limit: Int! = 10, skip: Int! = 0): [MobileAppInfo!]
+    "[visitor] 按ID查询帖子信息"
+    post(id: ID!): Post!
+    "[visitor] 查询帖子列表，topic2传的是名称不带#"
+    posts(category: ID! = "", limit: Int! = 10, time: DateTime! = 2145888000, topic: ID! = "", topic2: String! = ""): PostConnection!
+    "[visitor] 获取推荐帖子列表，page为页数从0开始，rand用于选择推荐列表，传一个固定的随机数"
+    recommendPosts(page: Int! = 0, rand: Int! = 0): [Post!]!
+    "[visitor] 查询话题列表，推荐"
+    recommendTopics2(limit: Int! = 6): [Topic2!]!
+    "[visitor] 按帖子查询回复信息"
+    replies(limit: Int! = 100, post: ID!, sort: Int! = 1, time: DateTime! = 0): [Reply!]!
+    "[visitor] 按ID查询回复信息"
+    reply(id: ID!): Reply!
+    "[admin] 查询举报 举报这块目前还是个残废，不用管"
+    report(id: ID!): Report
+    "[visitor] 查询所有举报原因"
+    reportReasons: [ReportReason!]!
+    "[admin] 查询所有举报 残废状态"
+    reports(limit: Int! = 10, time: DateTime! = 2145888000): [Report!]!
+    "[visitor] 搜索用户/帖子"
+    search(key: String!, limit: Int = 10, skip: Int = 0, type: SearchType!): [SearchResult!]!
+    "查询服务器/访客公开状态"
+    status: Status!
+    "[visitor] 按ID查询话题信息 残废状态"
+    topic(id: ID!): Topic!
+    "[visitor] 按ID查询话题信息"
+    topic2(id: ID!): Topic2!
+    "[visitor] 按话题名称查询话题信息"
+    topic2ByName(name: String!): Topic2!
+    "[visitor] 查询所有话题 残废状态"
+    topics: [Topic!]!
+    "[visitor] 查询话题列表，最新"
+    topics2(limit: Int! = 6): [Topic2!]!
+    "[user] 未读消息数"
+    unreadMessageCount(type: MessageType): MessageCount!
+    "[visitor] 按ID查询用户信息"
+    user(id: ID!): User!
+}
+
+type ReadMessagePayload {
+    success: Boolean!
+}
+
+type ReadMessagesPayload {
+    success: Boolean!
+}
+
+type ReadPostPayload {
+    success: Boolean!
+}
+
+type RegisterPayload {
+    id: ID!
+}
+
+"回复信息"
+type Reply {
+    "作者"
+    author: User!
+    "回复文本"
+    content: String!
+    "回复ID"
+    id: ID!
+    "点赞数"
+    like_count: Int!
+    "是否已赞 未登录返回false"
+    liked: Boolean!
+    "父回复   (二级回复特有 一级回复为null)"
+    parent_reply: Reply
+    "帖子，注意帖子不存在时会返回 null"
+    post: Post
+    "回复对象 (二级回复特有 一级回复为null)"
+    reply_at: Reply
+    "子回复   (一级回复特有 二级回复为null)"
+    sub_reply(limit: Int! = 100, sort: Int! = 1, time: DateTime! = 0): [Reply!]
+    "回复时间"
+    time: DateTime!
+    "更新时间"
+    update_time: DateTime!
+}
+
+type ReplyConnection {
+    nodes: [Reply!]!
+    pageInfo: PageInfo!
+}
+
+"举报信息"
+type Report {
+    "具体说明"
+    desc: String!
+    "举报ID"
+    id: ID!
+    "是否已处理"
+    processed: Boolean!
+    "举报原因"
+    reason: ID!
+    "处理结果"
+    result: Int!
+    "处理结果说明"
+    result_desc: String!
+    "对象ID"
+    target: ID!
+    "举报时间"
+    time: DateTime!
+    "对象类型"
+    type: ReportType!
+    "发起举报的用户"
+    user: User!
+}
+
+"举报原因"
+type ReportReason {
+    "举报原因描述"
+    desc: String!
+    "举报原因ID"
+    id: ID!
+}
+
+type SendCodePayload {
+    success: Boolean!
+}
+
+type SetPersonIDPayload {
+    success: Boolean!
+}
+
+type SetPhonePayload {
+    success: Boolean!
+}
+
+"状态信息"
+type Status {
+    "是否在校园网中，或许可以用来做一个炫酷的提示"
+    hust_network: Boolean!
+    "IP"
+    ip: String!
+    "当前角色权限"
+    role: Role!
+    "访客模式，on/off/hust（校园网）"
+    visitor_mode: String!
+}
+
+"话题信息"
+type Topic {
+    "话题描述"
+    desc: String!
+    "话题ID"
+    id: ID!
+    "话题的帖子"
+    posts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+    "话题标题"
+    title: String!
+}
+
+"话题信息"
+type Topic2 {
+    "话题ID"
+    id: ID!
+    "话题名称"
+    name: String!
+    "话题的帖子"
+    posts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+}
+
+type UpdateMobileAppInfoPayload {
+    success: Boolean!
+}
+
+type UpdatePostPayload {
+    success: Boolean!
+}
+
+type UpdatePostVisibilityPayload {
+    success: Boolean!
+}
+
+type UpdateReplyPayload {
+    success: Boolean!
+}
+
+type UpdateUserPayload {
+    success: Boolean!
+}
+
+"用户信息"
+type User {
+    "[user] 账号信息"
+    account_info: Account!
+    "头像URL"
+    avatar: String!
+    "是否已绑定微信"
+    bind_wechat: Boolean!
+    "注册时间"
+    create_time: DateTime!
+    "收藏的帖子"
+    favorite_posts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+    "关注他的用户"
+    followed_users(limit: Int! = 15, skip: Int! = 0): [User!]!
+    "关注的用户"
+    following_users(limit: Int! = 15, skip: Int! = 0): [User!]!
+    "是否关闭展示点赞"
+    hide_like: Boolean!
+    "是否关闭展示评论"
+    hide_reply: Boolean!
+    "用户ID"
+    id: ID!
+    "是否已关注 未登录/自己返回false"
+    is_following: Boolean!
+    "赞过的帖子"
+    liked_posts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+    "发过的贴子"
+    posts(limit: Int! = 10, time: DateTime! = 2145888000): PostConnection!
+    "发过的回复"
+    replies(limit: Int! = 10, time: DateTime! = 2145888000): ReplyConnection!
+    "用户数据"
+    user_count: UserCount!
+    "用户名"
+    username: String!
+    "是否已验证（绑定校园邮箱）"
+    verified: Boolean!
+}
+
+"用户数据"
+type UserCount {
+    "粉丝数"
+    followed_count: Int!
+    "关注数"
+    following_count: Int!
+    "被点赞"
+    liked_count: Int!
+    "帖子数"
+    post_count: Int!
+    "被评论"
+    replied_count: Int!
+}
+
+enum MessageType {
+    AT
+    COMMENT
+    FEEDBACK
+    FOLLOW
+    LIKE
+    LIKE_REPLY
+    OFFICIAL
+    REPLY
+    REPORT
+}
+
+"举报对象类型"
+enum ReportType {
+    POST
+    REPLY
+    USER
+}
+
+enum Role {
+    ADMIN
+    PUBLIC
+    USER
+    VISITOR
+}
+
+enum SearchType {
+    POST
+    USER
+}
+
+enum UploadType {
+    AVATAR
+    POST
+}
+
+scalar DateTime
+
+input AddBannerInput {
+    android_target_url: String! = ""
+    end_time: DateTime!
+    image_url: String!
+    ios_target_url: String! = ""
+    name: String!
+    priority: Int!
+    start_time: DateTime!
+    target_url: String! = ""
+    wx_target_url: String! = ""
+}
+
+input AddMobileAppInfoInput {
+    dex: String!
+    sign: String!
+    update_log: String!
+    url: String!
+    version: String!
+    version_code: Int!
+}
+
+input AddPostInput {
+    category: [ID]
+    content: String!
+    digest: String!
+    hide: Boolean
+    title: String!
+    topic: ID
+}
+
+input AddReplyInput {
+    content: String!
+    post: ID!
+    "二级回复的回复对象 一级回复忽略即可"
+    reply_at: ID
+}
+
+input AddReportInput {
+    desc: String!
+    reason: ID!
+    target: ID!
+    type: ReportType!
+}
+
+input BanUserInput {
+    ban: Boolean!
+    id: ID!
+}
+
+input BindWechatInput {
+    code: String!
+}
+
+input ChangePasswordInput {
+    email_verify_code: String!
+    is_alumni: Boolean!
+    new_password: String!
+    person_id: String!
+}
+
+input CheckPersonIDInput {
+    person_id: String!
+}
+
+input CheckPhoneInput {
+    phone: String!
+}
+
+input CheckUsernameInput {
+    username: String!
+}
+
+input DeleteAccountInput {
+    email_verify_code: String!
+    password: String!
+}
+
+input DeleteBannerInput {
+    id: ID!
+}
+
+input DeletePostInput {
+    id: ID!
+}
+
+input DeleteReplyInput {
+    id: ID!
+}
+
+input FavoritePostInput {
+    favorite: Boolean!
+    id: ID!
+}
+
+input FollowUserInput {
+    follow: Boolean!
+    id: ID!
+}
+
+input GetBannerUploadTokenInput {
+    "文件名"
+    filename: String!
+}
+
+input GetMobileAppUploadTokenInput {
+    "文件名"
+    filename: String!
+}
+
+input GetUploadTokenInput {
+    type: UploadType!
+}
+
+input GetWechatJsSignatureInput {
+    url: String!
+}
+
+input LikePostInput {
+    id: ID!
+    like: Boolean!
+}
+
+input LikeReplyInput {
+    id: ID!
+    like: Boolean!
+}
+
+input LoginByPhoneInput {
+    phone: String!
+    phone_verify_code: String!
+}
+
+input LoginByWechat {
+    code: String!
+}
+
+input LoginInput {
+    password: String!
+    person_id: String!
+}
+
+input ProcessReportInput {
+    id: ID!
+    result: Int!
+    result_desc: String! = ""
+}
+
+input ReadMessageInput {
+    id: ID!
+}
+
+input ReadMessagesInput {
+    type: MessageType
+}
+
+input ReadPostInput {
+    id: ID!
+}
+
+input RegisterByPhoneInput {
+    password: String!
+    phone: String!
+    phone_verify_code: String!
+    username: String!
+}
+
+input RegisterInput {
+    email_verify_code: String!
+    is_alumni: Boolean!
+    password: String!
+    person_id: String!
+    username: String!
+}
+
+input SendEmailCodeInput {
+    code: String
+    is_alumni: Boolean!
+    person_id: String!
+    type: String
+}
+
+input SendPhoneCodeInput {
+    code: String
+    phone: String!
+    type: String
+}
+
+input SetPersonIDInput {
+    email_verify_code: String!
+    is_alumni: Boolean!
+    person_id: String!
+}
+
+input SetPhoneInput {
+    phone: String!
+    phone_verify_code: String!
+}
+
+input UpdateMobileAppInfoInput {
+    dex: String! = ""
+    sign: String! = ""
+    update_log: String! = ""
+    url: String! = ""
+    version: String! = ""
+    version_code: Int!
+}
+
+input UpdatePostInput {
+    content: String
+    digest: String
+    hide: Boolean
+    id: ID!
+    title: String
+}
+
+input UpdatePostVisibilityInput {
+    id: ID!
+    visibility: Int!
+}
+
+input UpdateReplyInput {
+    content: String!
+    id: ID!
+}
+
+input UpdateUserInput {
+    avatar: String
+    hide_like: Boolean
+    hide_reply: Boolean
+    username: String
+}

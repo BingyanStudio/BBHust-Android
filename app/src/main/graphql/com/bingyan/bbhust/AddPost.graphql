@@ -1,0 +1,11 @@
+mutation AddPost($input: AddPostInput!) {
+    addPost(input: $input) {
+        id
+    }
+}
+
+mutation AddComment($input: AddReplyInput!) {
+    addReply(input: $input) {
+        id
+    }
+}

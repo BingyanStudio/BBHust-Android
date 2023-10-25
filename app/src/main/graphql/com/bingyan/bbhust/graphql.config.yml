@@ -1,0 +1,6 @@
+schema: schema.graphqls
+extensions:
+  endpoints:
+    GraphQL Endpoint:
+      url: https://api.hust.online/bbhust-dev2/api/graphql
+      introspect: false

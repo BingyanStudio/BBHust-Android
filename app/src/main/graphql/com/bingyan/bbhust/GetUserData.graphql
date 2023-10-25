@@ -1,0 +1,159 @@
+query UserPost($id:ID!,$time: DateTime!, $limit: Int!) {
+    user(id: $id){
+        posts(time:$time,limit:$limit){
+            nodes{
+                id
+                time
+                reply_time
+                title
+                digest
+                author {
+                    id
+                    username
+                    avatar
+                }
+                images
+                hot_value
+                category {
+                    id
+                    name
+                }
+                like_count
+                reply_count
+                liked
+                favorite
+            }
+        }
+    }
+}
+
+query UserLikedPost($id:ID!,$time: DateTime!, $limit: Int!) {
+    user(id: $id){
+        liked_posts(time:$time,limit:$limit){
+            nodes{
+                id
+                time
+                reply_time
+                title
+                author {
+                    id
+                    username
+                    avatar
+                }
+                images
+                digest
+                hot_value
+                category {
+                    id
+                    name
+                }
+                like_count
+                reply_count
+                liked
+                favorite
+            }
+        }
+    }
+}
+
+query UserMarkedPost($id:ID!,$time: DateTime!, $limit: Int!) {
+    user(id: $id){
+        favorite_posts(time:$time,limit:$limit){
+            nodes{
+                id
+                time
+                reply_time
+                title
+                author {
+                    id
+                    username
+                    avatar
+                }
+                images
+                digest
+                hot_value
+                category {
+                    id
+                    name
+                }
+                like_count
+                reply_count
+                liked
+                favorite
+            }
+        }
+    }
+}
+
+query UserRepliesPost($id:ID!,$time: DateTime!, $limit: Int!) {
+    user(id: $id){
+        replies(time:$time,limit:$limit){
+            pageInfo {
+                end_time
+                has_next_page
+            }
+            nodes{
+                id
+                time
+                content
+                author {
+                    id
+                    avatar
+                    username
+                }
+                post {
+                    id
+                    author {
+                        username
+                    }
+                    title
+                    digest
+                }
+            }
+        }
+    }
+}
+
+query Followed($id:ID!,$skip: Int!, $limit: Int!) {
+    user(id: $id){
+        followed_users(skip:$skip,limit:$limit){
+            id
+            avatar
+            username
+            user_count {
+                following_count
+                followed_count
+            }
+        }
+    }
+}
+query Following($id:ID!,$skip: Int!, $limit: Int!) {
+    user(id: $id){
+        following_users(skip:$skip,limit:$limit){
+            id
+            avatar
+            username
+            user_count {
+                following_count
+                followed_count
+            }
+        }
+    }
+}
+
+
+query UserData($id:ID!) {
+    user(id: $id){
+        id
+        create_time
+        username
+        avatar
+        is_following
+        user_count {
+            post_count
+            following_count
+            followed_count
+            liked_count
+        }
+    }
+}

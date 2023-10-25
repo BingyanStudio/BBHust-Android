@@ -8,8 +8,8 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.core.net.toUri
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
-import com.bingyan.bbhust.ui.widget.Style
-import com.bingyan.bbhust.ui.widget.style
+import com.bingyan.bbhust.ui.widgets.Style
+import com.bingyan.bbhust.ui.widgets.style
 
 class LocalContentWebViewClient(
     private val assetLoader: WebViewAssetLoader,

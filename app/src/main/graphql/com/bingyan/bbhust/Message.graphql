@@ -1,0 +1,58 @@
+query Messages($type: MessageType, $read: Boolean, $skip: Int!, $limit: Int!) {
+    messages(type: $type, read: $read, skip: $skip, limit: $limit) {
+        id
+        type
+        time
+        sender {
+            id
+            username
+            avatar
+        }
+        title
+        content
+        read
+        refer{
+            __typename
+            ... on Reply{
+                id
+                content
+                post {
+                    id
+                    title
+                    digest
+                    time
+                }
+                reply_at {
+                    id
+                    content
+                    time
+                }
+            }
+            ... on Post{
+                id
+                title
+                digest
+                images
+                time
+            }
+        }
+    }
+}
+
+mutation ReadMessage($input:ReadMessageInput!){
+    readMessage(input:$input){
+        success
+    }
+}
+
+mutation ReadMessages($input:ReadMessagesInput!){
+    readMessages(input:$input){
+        success
+    }
+}
+
+query UnreadMessageCount($type: MessageType){
+    unreadMessageCount(type: $type){
+        count
+    }
+}
