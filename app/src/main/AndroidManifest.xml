@@ -2,30 +2,100 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <queries>
+        <intent>
+            <action android:name="com.getui.sdk.action" />
+        </intent>
+
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.tencent.mobileqq" />
+        <package android:name="com.sina.weibo" />
+        <package android:name="com.tencent.wework" />
+        <package android:name="com.qzone" />
+        <package android:name="com.ss.android.ugc.aweme" />
+    </queries>
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.GET_TASKS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="getui.permission.GetuiService.com.bingyan.bbhust" />
+
+    <permission
+        android:name="getui.permission.GetuiService.com.bingyan.bbhust2"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="com.vivo.notification.permission.BADGE_ICON" />
+
     <application
-        android:name="com.bingyan.bbhust.App"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BBHust"
         android:usesCleartextTraffic="true"
+        android:name=".App"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_config"
         tools:targetApi="31">
         <activity
             android:name="com.bingyan.bbhust.MainActivity"
+            android:configChanges="orientation|uiMode"
             android:exported="true"
-            android:theme="@style/Theme.BBHust"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="um.633af38d05844627b55b58e0" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.APP_BROWSER" />
+
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+                <data android:host="bb.hust.online" />
+                <data android:host="bbhust-dev.hust.online" />
+            </intent-filter>
         </activity>
+        <!-- 请根据您当前自定义的 PushService 名称路径进行配置-->
+
+        <!--        <activity-->
+        <!--            android:name=".PopWindowActivity"-->
+        <!--            android:configChanges="orientation|uiMode"-->
+        <!--            android:exported="false"-->
+        <!--            android:theme="@style/ActivityTranslucent"-->
+        <!--            android:windowSoftInputMode="adjustResize" />-->
+
+        <!--        <service-->
+        <!--            android:name=".AppPushService"-->
+        <!--            android:exported="false"-->
+        <!--            android:label="PushService"-->
+        <!--            android:process=":pushservice" />-->
+        <!--        <service-->
+        <!--            android:name=".AppPushIntentService"-->
+        <!--            android:exported="false"-->
+        <!--            android:label="PushService"-->
+        <!--            android:process=":pushservice" />-->
+
     </application>
 
 </manifest>

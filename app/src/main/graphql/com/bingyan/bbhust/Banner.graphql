@@ -1,0 +1,8 @@
+query Banner{
+    banners{
+        id
+        image_url
+        android_target_url
+        target_url
+    }
+}

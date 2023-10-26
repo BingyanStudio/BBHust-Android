@@ -1,9 +1,11 @@
 package com.bingyan.bbhust.utils
 
+import android.util.Log
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.ApolloRequest
 import com.apollographql.apollo3.api.ApolloResponse
 import com.apollographql.apollo3.api.Operation
+import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.interceptor.ApolloInterceptor
 import com.apollographql.apollo3.interceptor.ApolloInterceptorChain
 import kotlinx.coroutines.FlowPreview
@@ -37,10 +39,12 @@ fun authInterceptor(): ApolloInterceptor {
 
 fun <T : Operation.Data> Flow<ApolloResponse<T>>.onSuccess(onSuccess: (T) -> Unit): Flow<ApolloResponse<T>> {
     return onEach {
-        println("dataIt:${it.data}")
+        Log.i("dataIt", "${it.data}")
         val data = it.data
         if (data != null) {
             onSuccess(data)
+        } else {
+            Log.e("Flow", "data is null")
         }
     }
 }
@@ -74,3 +78,8 @@ fun <T : Operation.Data, A> Flow<Pair<ApolloResponse<T>, A>>.errorHandler(handle
         }
     }
 }
+
+val <T> T?.toOptional
+    get(): Optional<T> {
+        return Optional.presentIfNotNull(this)
+    }

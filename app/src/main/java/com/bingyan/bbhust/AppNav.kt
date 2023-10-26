@@ -16,10 +16,11 @@ import androidx.navigation.NavOptions
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.bingyan.bbhust.ui.provider.LocalNav
-import com.bingyan.bbhust.ui.screen.account.AccountScreen
-import com.bingyan.bbhust.ui.screen.add.memory.AddMemoryScreen
-import com.bingyan.bbhust.ui.screen.feed.FeedScreen
-import com.bingyan.bbhust.ui.screen.home.MainContainer
+import com.bingyan.bbhust.ui.screen.browser.BrowserScreen
+import com.bingyan.bbhust.ui.screen.index.AppScaffold
+import com.bingyan.bbhust.ui.screen.login.LoginScreen
+import com.bingyan.bbhust.utils.LOGIN_URL
+import com.bingyan.bbhust.utils.REGISTER_URL
 import com.bingyan.bbhust.utils.ifElse
 import com.bingyan.bbhust.utils.kv
 import com.google.accompanist.navigation.animation.AnimatedNavHost
@@ -32,27 +33,37 @@ import java.net.ServerSocket
 fun AppNav(nav: NavHostController = rememberAnimatedNavController()) {
     AnimatedNavHost(
         navController = nav,
-        startDestination = kv.token.isNullOrBlank().ifElse(AppRoute.account, AppRoute.index)
+        startDestination = kv.token.isNullOrBlank().ifElse(AppRoute.LOGIN, AppRoute.MAIN)
     ) {
         ServerSocket()
         animateCompose(
-            AppRoute.index,
+            AppRoute.MAIN,
         ) {
-            MainContainer.View()
+            AppScaffold.View(nav)
         }
-        animateCompose(AppRoute.account) {
-            AccountScreen.View()
-        }
-        animateCompose(AppRoute.addMemory) {
-            AddMemoryScreen.View()
+        animateCompose(AppRoute.LOGIN) {
+            LoginScreen.View()
         }
 
         animateCompose(
-            AppRoute.memory("{id}"),
-            listOf(navArgument("id") { type = NavType.StringType })
+            AppRoute.BROWSER + "?url={url}",
+            listOf(navArgument("url") { type = NavType.StringType })
         ) {
-            FeedScreen.View(id = it.arguments?.getString("id") ?: "")
+            BrowserScreen(nav = nav, url = it.arguments?.getString("url") ?: "")
         }
+
+        animateCompose(
+            AppRoute.BROWSER_SERVICE + "?url={url}",
+            listOf(navArgument("url") { type = NavType.StringType })
+        ) {
+            BrowserScreen(nav = nav, url = it.arguments?.getString("url") ?: "", service = true)
+        }
+//        animateCompose(
+//            AppRoute.memory("{id}"),
+//            listOf(navArgument("id") { type = NavType.StringType })
+//        ) {
+//            FeedScreen.View(id = it.arguments?.getString("id") ?: "")
+//        }
     }
 }
 
@@ -94,7 +105,7 @@ fun NavHostController.replace(route: String) {
         route, NavOptions.Builder()
             .setEnterAnim(R.anim.enter)
             .setExitAnim(R.anim.exit)
-            .setPopUpTo(AppRoute.index, true).build()
+            .setPopUpTo(AppRoute.MAIN, true).build()
     )
 }
 
@@ -112,8 +123,38 @@ fun NavHostController.pop() {
 }
 
 object AppRoute {
-    const val addMemory = "/addMemory"
-    const val index = "/"
-    const val account = "/account"
-    fun memory(id: String) = "/memory/$id"
+    const val MAIN = "main"
+    const val ABOUT = "about"
+    const val OPEN_SOURCE = "about/open_source"
+    const val TIMELINE = "about/timeline"
+    const val POST_CREATE = "post/create"
+    const val SETTINGS = "settings"
+    const val POST = "post/feed"
+    const val POST_REPLY = "post/feed_reply"
+    const val USER = "user"
+    const val USER_CHANGE = "user/change"
+    const val LOGIN = "user/login"
+    const val MESSAGE_OFFICIAL = "message/official"
+    const val MESSAGE_LIKE = "message/like"
+    const val MESSAGE_FOLLOW = "message/follow"
+    const val MESSAGE_AT = "message/at"
+    const val MY_LIKE = "me/like"
+    const val MY_MARK = "me/mark"
+    const val MY_FEED = "me/feed"
+    const val MY_COMMENT = "me/comment"
+    const val FOLLOWING = "user/following"
+    const val FOLLOWED = "user/followed"
+    const val IMAGE_CROP = "crop"
+    const val BROWSER = "browser"
+    const val BROWSER_SERVICE = "browser_service"
+    const val SEARCH = "search"
+
+    fun post(id: String) = "$POST/$id"
+    fun postReply(id: String) = "$POST_REPLY/$id"
+    fun user(id: String) = "$USER/$id"
+
+    object H5 {
+        val login = "$BROWSER_SERVICE?url=$LOGIN_URL"
+        val register = "$BROWSER_SERVICE?url=$REGISTER_URL"
+    }
 }

@@ -10,11 +10,13 @@ import androidx.core.view.WindowCompat
 import com.bingyan.bbhust.ui.markdown.WebViewProvider
 import com.bingyan.bbhust.ui.provider.AppUriHandler
 import com.bingyan.bbhust.ui.provider.LocalActivity
-import com.bingyan.bbhust.ui.provider.LocalImageViewer
+import com.bingyan.bbhust.ui.provider.LocalGalley
 import com.bingyan.bbhust.ui.provider.LocalNav
 import com.bingyan.bbhust.ui.provider.LocalPicker
+import com.bingyan.bbhust.ui.provider.LocalShare
 import com.bingyan.bbhust.ui.provider.LocalWebView
 import com.bingyan.bbhust.ui.provider.Picker
+import com.bingyan.bbhust.ui.provider.ShareProvider
 import com.bingyan.bbhust.ui.theme.AppTheme
 import com.bingyan.bbhust.ui.viewer.ImageViewerManger
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
@@ -37,7 +39,8 @@ class MainActivity : ComponentActivity() {
                 LocalNav provides nav,
                 LocalUriHandler provides uriHandler,
                 LocalWebView provides WebViewProvider(this, imageViewerManger, uriHandler).web,
-                LocalImageViewer provides imageViewerManger,
+                LocalGalley provides imageViewerManger,
+                LocalShare provides ShareProvider()
             ) {
                 AppTheme {
                     AppNav(nav)

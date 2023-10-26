@@ -4,4 +4,5 @@ plugins {
     id("com.android.library") version "8.1.2" apply false
     id("org.jetbrains.kotlin.android") version Kotlin.version apply false
     id("com.apollographql.apollo3") version "3.8.1" apply false
+    id("com.google.devtools.ksp") version Kotlin.kspVersion apply false
 }

@@ -95,7 +95,6 @@ val colors: AppColors
 fun AppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -115,7 +114,6 @@ fun AppTheme(
     }
     CompositionLocalProvider(LocalColor provides colorScheme) {
         MaterialTheme(
-            typography = Typography,
             content = content
         )
     }

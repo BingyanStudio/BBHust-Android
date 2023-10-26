@@ -26,6 +26,14 @@ fun Modifier.click(click: () -> Unit) = composed {
     )
 }
 
+fun Modifier.clickRipple(click: () -> Unit) = composed {
+    Modifier.clickable(
+        onClick = click,
+        indication = RippleIndication,
+        interactionSource = remember { MutableInteractionSource() }
+    )
+}
+
 fun Modifier.clickNoRepeat(
     color: Color = Color.Unspecified,
     repeatDuring: Long = 500,

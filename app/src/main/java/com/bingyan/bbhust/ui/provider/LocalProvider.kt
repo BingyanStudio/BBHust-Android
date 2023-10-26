@@ -24,5 +24,6 @@ inline fun <reified T> localStaticProvider(): ProvidableCompositionLocal<T> {
 val LocalNav = localProvider<NavHostController>()
 val LocalPicker = localProvider<ActivityResultLauncher<ChooseFiles>>()
 val LocalWebView = localStaticProvider<WebView>()
-val LocalImageViewer = localStaticProvider<ImageViewerManger>()
+val LocalGalley = localStaticProvider<ImageViewerManger>()
+val LocalShare = localStaticProvider<ShareProvider>()
 val LocalActivity = localProvider<Activity>()

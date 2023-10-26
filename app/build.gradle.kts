@@ -1,14 +1,12 @@
-import Compose.composeBom
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.apollographql.apollo3")
+    id("com.google.devtools.ksp")
 }
 
 apollo {
     service("srv") {
-//        packageName.set("com.example")
         packageNamesFromFilePaths()
         mapScalarToKotlinString("DateTime")
     }
@@ -16,30 +14,48 @@ apollo {
 android {
     namespace = "com.bingyan.bbhust"
     compileSdk = 34
-
     defaultConfig {
         applicationId = "com.bingyan.bbhust.nt"
         minSdk = 21
         targetSdk = 34
         versionCode = Version.versionCode
         versionName = Version.versionName
-
+        manifestPlaceholders.putAll(
+            mapOf(
+                "GETUI_APPID" to "q5u4D40bLn8xOHZMZPnOq2",
+                // 华为 相关应用参数
+                "HUAWEI_APP_ID" to "107164745",
+                // OPPO 相关应用参数
+                "OPPO_APP_KEY" to "a39608c7bbbf4598bcbfe7b04c5f46d2",
+                "OPPO_APP_SECRET" to "2e26edcf19a94e6f8c6e35457712bf83",
+                // VIVO 相关应用参数
+                "VIVO_APP_ID" to "105596268",
+                "VIVO_APP_KEY" to "42463640abd6fdc90d06386342f4d16c",
+                // 魅族相关应用参数
+                "MEIZU_APP_ID" to "150176",
+                "MEIZU_APP_KEY" to "22fdb3e7b3914e2c9db878d852e22a0c",
+            )
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
     }
-
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            resValue("string", "app_name", "@string/app_name_stable")
             setProguardFiles(
                 listOf(
                     getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro"
                 )
             )
+        }
+        debug {
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "@string/app_name_dev")
         }
     }
     compileOptions {
@@ -62,61 +78,103 @@ android {
     }
 }
 dependencies {
-    implementation(Accompanist.reorderable)
-    implementation(Utils.gridPad)
-    implementation(Utils.palette)
-
     implementation(project(":richtext"))
-    implementation(Markdown.commonMark)
-    implementation(Markdown.autolink)
-    implementation(Markdown.strikethough)
-    implementation(Markdown.gfmTable)
-    implementation(Markdown.taskList)
-    implementation(WebKit.base)
-
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
-    implementation(Utils.androidUtils)
-    implementation(Utils.jsoup)
+    Accompanist.apply {
+        implementation(reorderable)
+        implementation(systemUiController)
+        implementation(navigationAnimation)
+    }
 
-    implementation(MMKV.base)
+    Coil.apply {
+        implementation(base)
+        implementation(gif)
+        implementation(svg)
+        implementation(compose)
+    }
 
-    implementation(Apollo.apollo)
+    Compose.apply {
+        implementation(base)
+        implementation(composeBom())
+        implementation(ui)
+        implementation(graphics)
+        implementation(uiToolingPreview)
+        implementation(material)
+        implementation(constraint)
+        implementation(material3)
+        implementation(navigation)
 
-    implementation(Accompanist.systemUiController)
-    implementation(Accompanist.navigationAnimation)
+        androidTestImplementation(composeBom())
+        androidTestImplementation(junit)
+        debugImplementation(uiTooling)
+        debugImplementation(uiTestManifest)
+    }
 
-    implementation(Coil.base)
-    implementation(Coil.compose)
+    Lifecycle.apply {
+        implementation(runtime)
+        implementation(viewModel)
+        implementation(viewModelCompose)
+        implementation(liveData)
+        implementation(savedState)
+    }
 
-    implementation(AndroidX.core)
+    Markdown.apply {
+        implementation(commonMark)
+        implementation(autolink)
+        implementation(strikethough)
+        implementation(gfmTable)
+        implementation(taskList)
+    }
 
-    implementation(Google.material)
+    Moshi.apply {
+        implementation(base)
+        implementation(kotlin)
+        ksp(codegen)
+    }
 
-    implementation(Lifecycle.runtime)
-    implementation(Lifecycle.viewModel)
-    implementation(Lifecycle.viewModelCompose)
-    implementation(Lifecycle.liveData)
-    implementation(Lifecycle.savedState)
+    PushService.apply {
+        implementation(sdk)
+        implementation(core)
+        implementation(huawei)
+        implementation(hms)
+        implementation(oppo)
+        implementation(vivo)
+        implementation(meizu)
+    }
 
-    implementation(Compose.base)
-    implementation(composeBom())
-    implementation(Compose.ui)
-    implementation(Compose.graphics)
-    implementation(Compose.uiToolingPreview)
-    implementation(Compose.material)
-    implementation(Compose.constraint)
-    implementation(Compose.material3)
-    implementation(Compose.navigation)
+    Retrofit.apply {
+        implementation(base)
+        implementation(converter)
+    }
 
-    testImplementation(Test.junit)
-    androidTestImplementation(Test.junitExt)
-    androidTestImplementation(Test.espresso)
-    androidTestImplementation(composeBom())
-    androidTestImplementation(Compose.junit)
-    debugImplementation(Compose.uiTooling)
-    debugImplementation(Compose.uiTestManifest)
+    Utils.apply {
+        implementation(gridPad)
+        implementation(palette)
+        implementation(tooltip)
+        implementation(zxing)
+        implementation(nestScrollView)
+        implementation(androidUtils)
+        implementation(jsoup)
+        implementation(apollo)
+        implementation(androidxCore)
+        implementation(material)
+        implementation(mmkv)
+        implementation(webkit)
+    }
+
+    Umeng.apply {
+        implementation(sdk)
+        implementation(asms)
+        implementation(apm)
+    }
+
+    TestTool.apply {
+        testImplementation(junit)
+        androidTestImplementation(junitExt)
+        androidTestImplementation(espresso)
+    }
 }
 
 task("generateApollo") {

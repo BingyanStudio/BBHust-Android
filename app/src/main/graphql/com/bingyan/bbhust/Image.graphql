@@ -1,0 +1,7 @@
+mutation GetUploadToken($input:GetUploadTokenInput!){
+    getUploadToken(input:$input){
+        token
+        url
+        resource_key
+    }
+}

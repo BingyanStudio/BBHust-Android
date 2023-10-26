@@ -1,0 +1,39 @@
+query Category {
+    categories{
+        id
+        name
+        argue_count
+        read_count
+        desc
+        hot_value
+    }
+}
+
+query CategoryPost($id:ID!,$time: DateTime!, $limit: Int!){
+    category(id: $id){
+        posts(time: $time, limit: $limit){
+            post:nodes{
+                id
+                author{
+                    id
+                    username
+                    avatar
+                }
+                time
+                reply_time
+                title
+                digest
+                images
+                hot_value
+                category {
+                    id
+                    name
+                }
+                like_count
+                reply_count
+                liked
+                favorite
+            }
+        }
+    }
+}

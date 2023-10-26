@@ -12,9 +12,9 @@ sealed class TriState {
 
 /// 通用四态：闲置、加载（刷新）、加载更多、错误
 sealed class FourState {
-    object Idle : FourState()
-    object Loading : FourState()
-    object OnMore : FourState()
+    data class Idle(val noMore: Boolean) : FourState()
+    data object Loading : FourState()
+    data object OnMore : FourState()
     data class Error(val msg: String) : FourState()
 }
 

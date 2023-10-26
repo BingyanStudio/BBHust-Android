@@ -31,24 +31,24 @@ abstract class BaseViewModel<S, A>(s: S) : ViewModel() {
 
     /// 重载 send 方法，使其可以直接传入 Action
     fun A.send() {
-        state = reduce(this)
+        reduce(this).update()
     }
 
     /// 执行匿名函数所返回的 Action
     infix fun act(action: () -> A) {
-        state = reduce(action())
+        action().send()
     }
 
     /// 重载 act 方法，使其可以直接传入 Action
     infix fun act(action: A) {
-        state = reduce(action)
+        action.send()
     }
 
     /**
      * 立即更新值,并在之后执行 action
      */
     inline fun S.then(action: () -> Unit): S {
-        state = this
+        this.update()
         action()
         return state
     }

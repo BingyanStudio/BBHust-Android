@@ -1,0 +1,200 @@
+query Posts($time: DateTime!, $limit: Int!){
+    posts(time: $time, limit: $limit){
+        post:nodes{
+            id
+            author{
+                id
+                username
+                avatar
+            }
+            time
+            reply_time
+            title
+            digest
+            images
+            hot_value
+            category {
+                id
+                name
+            }
+            like_count
+            reply_count
+            liked
+            favorite
+        }
+    }
+}
+
+query HotPosts{
+    post:hotPosts {
+        id
+        author{
+            id
+            username
+            avatar
+        }
+        time
+        reply_time
+        title
+        digest
+        images
+        hot_value
+        category {
+            id
+            name
+        }
+        like_count
+        reply_count
+        liked
+        favorite
+    }
+}
+
+query RecommendPosts($rand : Int! , $page : Int!){
+    posts:recommendPosts(rand:$rand,page:$page) {
+        id
+        author{
+            id
+            username
+            avatar
+        }
+        time
+        reply_time
+        title
+        digest
+        images
+        hot_value
+        category {
+            id
+            name
+        }
+        like_count
+        reply_count
+        liked
+        favorite
+
+    }
+}
+
+query FollowingPost($time: DateTime!, $limit: Int!){
+    posts:followingPosts(limit: $limit,time: $time) {
+        post:nodes {
+            id
+            author{
+                id
+                username
+                avatar
+            }
+            time
+            reply_time
+            title
+            digest
+            images
+            hot_value
+            category {
+                id
+                name
+            }
+            like_count
+            reply_count
+            liked
+            favorite
+        }
+    }
+}
+
+query Post($id: ID!){
+    post(id:$id){
+        id
+        author{
+            id
+            username
+            avatar
+        }
+        time
+        reply_time
+        title
+        digest
+        content
+        images
+        hot_value
+        category {
+            id
+            name
+        }
+        like_count
+        reply_count
+        liked
+        favorite
+    }
+}
+
+query Reply($id: ID!){
+    reply(id:$id){
+        id
+        author {
+            id
+            avatar
+            username
+        }
+        time
+        content
+        like_count
+        liked
+        sub_reply {
+            id
+            author {
+                id
+                avatar
+                username
+            }
+            reply_at {
+                id
+                author {
+                    id
+                    username
+                }
+                content
+            }
+            like_count
+            liked
+            time
+            content
+        }
+    }
+}
+
+query Replies($post : ID! , $time : DateTime!, $limit : Int! , $sort : Int!){
+    replies(post:$post, time:$time, limit:$limit, sort:$sort){
+        id
+        author {
+            id
+            avatar
+            username
+        }
+        time
+        content
+        like_count
+        liked
+        sub_reply {
+            id
+            author {
+                id
+                avatar
+                username
+            }
+            reply_at {
+                id
+                author {
+                    id
+                    username
+                }
+                content
+            }
+            like_count
+            liked
+            time
+            content
+        }
+    }
+}

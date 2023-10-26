@@ -1,0 +1,39 @@
+query Search($type:SearchType!,$key:String!,$skip: Int!, $limit: Int!){
+    search(type: $type,key: $key,skip: $skip, limit: $limit){
+        ... on Post{
+            id
+            author{
+                id
+                username
+                avatar
+            }
+            time
+            reply_time
+            title
+            digest
+            images
+            hot_value
+            category {
+                id
+                name
+            }
+            like_count
+            reply_count
+            liked
+            favorite
+        }
+        ... on User{
+            id
+            create_time
+            username
+            avatar
+            is_following
+            user_count {
+                post_count
+                following_count
+                followed_count
+                liked_count
+            }
+        }
+    }
+}

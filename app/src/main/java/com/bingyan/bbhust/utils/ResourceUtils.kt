@@ -9,9 +9,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bingyan.bbhust.App
-
+val Int.string get() = string(this)
 fun string(id: Int) = resource.getString(id)
-
 fun string(id: Int, vararg formatArgs: Any) = resource.getString(id, *formatArgs)
 
 val resource: Resources = App.CONTEXT.resources

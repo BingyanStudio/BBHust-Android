@@ -1,0 +1,35 @@
+query update{
+    mobileAppInfo{
+        version
+        version_code
+        update_log
+        url
+    }
+}
+
+query app($code:Int){
+    mobileAppInfo(version_code: $code){
+        version_code
+        dex
+        sign
+    }
+}
+
+mutation GetAppUploadToken($input: GetMobileAppUploadTokenInput!){
+    getMobileAppUploadToken(input: $input){
+        token
+        url
+        resource_key
+    }
+}
+
+mutation AddMobileApp($input: AddMobileAppInfoInput!){
+    addMobileAppInfo(input: $input){
+        success
+    }
+}
+mutation UpdateMobileApp($input: UpdateMobileAppInfoInput!){
+    updateMobileAppInfo(input: $input){
+        success
+    }
+}
