@@ -8,6 +8,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavHostController
 import com.bingyan.bbhust.ui.viewer.ImageViewerManger
+import com.bingyan.bbhust.ui.widgets.SnackHostState
 
 inline fun <reified T> localProvider(): ProvidableCompositionLocal<T> {
     return compositionLocalOf {
@@ -27,3 +28,4 @@ val LocalWebView = localStaticProvider<WebView>()
 val LocalGalley = localStaticProvider<ImageViewerManger>()
 val LocalShare = localStaticProvider<ShareProvider>()
 val LocalActivity = localProvider<Activity>()
+val LocalSnack = localProvider<SnackHostState>()
