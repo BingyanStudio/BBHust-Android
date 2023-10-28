@@ -45,7 +45,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            resValue("string", "app_name", "@string/app_name_stable")
+            resValue("string", "app_name", "BBHust")
             setProguardFiles(
                 listOf(
                     getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -55,7 +55,7 @@ android {
         }
         debug {
             applicationIdSuffix = ".dev"
-            resValue("string", "app_name", "@string/app_name_dev")
+            resValue("string", "app_name", "BBHust Dev")
         }
     }
     compileOptions {
