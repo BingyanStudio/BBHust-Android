@@ -92,7 +92,11 @@ fun NavGraphBuilder.animateCompose(
         },
         arguments = arguments,
         deepLinks = deepLinks,
-        content = content
+        content = {
+            // Wrap it with Dialog & BottomSheetDialog
+            content(it)
+            // Wrap it with Dialog & BottomSheetDialog
+        }
     )
 
 @Composable
