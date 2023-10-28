@@ -1,6 +1,8 @@
 package com.bingyan.bbhust.ui.screen.browser
 
 import android.graphics.Bitmap
+import android.net.http.SslError
+import android.webkit.SslErrorHandler
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
@@ -23,4 +25,11 @@ class MWebViewClient(val onProgress: (Int) -> Unit, val onStart: (String) -> Uni
     override fun onPageFinished(view: WebView, url: String) {
         onProgress(100)
     }
+
+    override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
+//        super.onReceivedSslError(view, handler, error)
+        handler?.cancel()
+    }
+
+
 }
