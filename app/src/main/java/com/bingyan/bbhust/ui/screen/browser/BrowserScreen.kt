@@ -106,9 +106,9 @@ fun BrowserScreen(nav: NavHostController, url: String, service: Boolean = false)
                     )
                 }
             })
-        if (progress.value < 100) {
+        if (progress.intValue < 100) {
             LinearProgressIndicator(
-                progress = progress.value.toFloat() / 100,
+                progress = progress.intValue.toFloat() / 100,
                 modifier = Modifier
                     .height(2.dp)
                     .fillMaxWidth(),
@@ -128,15 +128,11 @@ fun BrowserScreen(nav: NavHostController, url: String, service: Boolean = false)
                     webSettings.javaScriptEnabled = true
                     webSettings.javaScriptCanOpenWindowsAutomatically = true
                     //缩放操作
-                    //缩放操作
                     webSettings.setSupportZoom(true) //支持缩放，默认为true。是下面那个的前提。
                     webSettings.builtInZoomControls = true //设置内置的缩放控件。若为false，则该LitWebView不可缩放
                     webSettings.displayZoomControls = false //隐藏原生的缩放控件
-
                     webSettings.useWideViewPort = true
                     webSettings.domStorageEnabled = true
-                    webSettings.javaScriptCanOpenWindowsAutomatically = true //支持js调用window.open方法
-
                     webSettings.allowFileAccess = true // 设置允许访问文件数据
                     webSettings.setSupportMultipleWindows(true) // 设置允许开启多窗口
                     webSettings.cacheMode = WebSettings.LOAD_DEFAULT
