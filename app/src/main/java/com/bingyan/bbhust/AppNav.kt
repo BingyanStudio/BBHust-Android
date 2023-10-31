@@ -26,7 +26,6 @@ import com.bingyan.bbhust.utils.kv
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
-import java.net.ServerSocket
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -35,7 +34,6 @@ fun AppNav(nav: NavHostController = rememberAnimatedNavController()) {
         navController = nav,
         startDestination = kv.token.isNullOrBlank().ifElse(AppRoute.LOGIN, AppRoute.MAIN)
     ) {
-        ServerSocket()
         animateCompose(
             AppRoute.MAIN,
         ) {
@@ -92,11 +90,7 @@ fun NavGraphBuilder.animateCompose(
         },
         arguments = arguments,
         deepLinks = deepLinks,
-        content = {
-            // Wrap it with Dialog & BottomSheetDialog
-            content(it)
-            // Wrap it with Dialog & BottomSheetDialog
-        }
+        content = content
     )
 
 @Composable
