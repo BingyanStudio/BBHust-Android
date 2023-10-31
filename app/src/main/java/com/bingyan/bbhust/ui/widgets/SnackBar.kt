@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.RecomposeScope
 import androidx.compose.runtime.Stable
@@ -35,6 +36,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bingyan.bbhust.ui.provider.LocalSnack
 import com.bingyan.bbhust.ui.theme.CardShapes
 import com.bingyan.bbhust.ui.theme.Gap
 import com.bingyan.bbhust.ui.theme.colors
@@ -50,6 +52,23 @@ const val SNACK_INFO = ""
 const val SNACK_WARN = " "
 const val SNACK_ERROR = "  "
 const val SNACK_SUCCESS = "OK"
+
+@Composable
+fun AppSnack(
+    content: @Composable () -> Unit
+) {
+    val hostState = remember { SnackHostState() }
+    CompositionLocalProvider(
+        LocalSnack provides hostState
+    ) {
+        Box(modifier = Modifier) {
+            content()
+            SnackbarHost(hostState = hostState) {
+                // todo: snackbar content
+            }
+        }
+    }
+}
 
 @Composable
 fun SnackbarHost(
