@@ -1,8 +1,8 @@
 package com.bingyan.bbhust.ui.provider
 
 import android.app.Activity
-import android.app.ActivityOptions
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -14,6 +14,7 @@ import com.bingyan.bbhust.AppRoute
 import com.bingyan.bbhust.R
 import com.bingyan.bbhust.utils.string
 import com.blankj.utilcode.util.ClipboardUtils
+import com.blankj.utilcode.util.ViewUtils.runOnUiThread
 
 fun NavHostController.jump(dest: String) {
     navigate(dest)
@@ -43,7 +44,7 @@ fun Activity.jumpIntent(intent: Intent) {
     }
 }
 
-fun Activity.browseExternal(url: String) {
+fun Context.browseExternal(url: String) {
     try {
         val uri = Uri.parse(url)
         val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -55,12 +56,12 @@ fun Activity.browseExternal(url: String) {
     }
 }
 
-fun Activity.jumpClass(cls: Class<*>) {
+fun Context.jumpClass(cls: Class<*>) {
     try {
         startActivity(
             Intent(this, cls),
-            ActivityOptions.makeSceneTransitionAnimation(this)
-                .toBundle()
+//            ActivityOptions.makeSceneTransitionAnimation(this)
+//                .toBundle()
         )
     } catch (e: ActivityNotFoundException) {
         toast(R.string.app_not_installed.string)
@@ -73,7 +74,7 @@ fun Pop() {
     nav.popBackStack()
 }
 
-fun Activity.toast(msg: String) {
+fun Context.toast(msg: String) {
     runOnUiThread {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }

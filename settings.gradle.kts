@@ -19,4 +19,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "BBHust"
 include(":app")
-include(":richtext")

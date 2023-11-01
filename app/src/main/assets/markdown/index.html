@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link href="/assets/markdown/github-markdown.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@3.0.0/marked.min.js"></script>
+    <script src="/assets/markdown/purify.min.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="md" style="display:none">{{Markdown}}</div>
+<script>
+    marked.use({
+      gfm: true,
+    });
+    function unescapeHtml(html) {
+        return html.replaceAll("&amp;", "&")
+             .replaceAll("&lt;", "<")
+             .replaceAll("&gt;", ">")
+             .replaceAll("&quot;", '"')
+             .replaceAll("&#039;", "'");
+    }
+    var m=document.querySelectorAll('div#md');
+    for(var i=0;i<m.length;i++){
+        m[i].outerHTML='<div class="markdown-body">'+DOMPurify.sanitize(marked(unescapeHtml(m[i].innerHTML)))+'</div>';
+    }
+    var images=document.querySelectorAll('img');
+    var list = ""
+    images.forEach(function (v) {
+        list += "\n"+v.src
+    })
+    for(var i=0;i<images.length;i++){
+        (function (id) {
+            images[i].onclick = function () {
+                console.log("img:\n"+id+list)
+            }
+        })(i);
+    }
+
+</script>
+</body>
+</html>

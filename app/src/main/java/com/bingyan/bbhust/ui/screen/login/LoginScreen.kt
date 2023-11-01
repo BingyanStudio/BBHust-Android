@@ -20,6 +20,7 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +29,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import com.bingyan.bbhust.App
@@ -42,6 +42,7 @@ import com.bingyan.bbhust.ui.theme.themeColor
 import com.bingyan.bbhust.ui.widgets.FillButton
 import com.bingyan.bbhust.utils.AuthUtils
 import com.bingyan.bbhust.utils.string
+import com.umeng.analytics.MobclickAgent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -49,9 +50,10 @@ var isExit = false
 
 object LoginScreen {
     @Composable
-    fun View(
-        vm: LoginViewModel = viewModel()
-    ) {
+    fun View() {
+        LaunchedEffect(Unit) {
+            MobclickAgent.onProfileSignOff() // 友盟统计退出统计
+        }
         val nav = LocalNav.current
         val scope = rememberCoroutineScope()
         BackHandler {

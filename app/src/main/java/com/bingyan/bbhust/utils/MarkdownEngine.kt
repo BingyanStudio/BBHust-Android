@@ -1,7 +1,5 @@
 package com.bingyan.bbhust.utils
 
-import com.bingyan.bbhust.ext.ext.ExtExtension
-import com.bingyan.bbhust.ext.tip.TipExtension
 import org.commonmark.ext.autolink.AutolinkExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
@@ -18,8 +16,6 @@ object MarkdownEngine {
             AutolinkExtension.create(),
             TaskListItemsExtension.create(),
             StrikethroughExtension.create(),
-            TipExtension.create(),
-            ExtExtension.create()
         )
 
         val parser: Parser = Parser.builder().extensions(extensions).build()

@@ -21,12 +21,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.bingyan.bbhust.R
-import com.bingyan.bbhust.ui.provider.LocalActivity
 import com.bingyan.bbhust.ui.provider.browseExternal
 import com.bingyan.bbhust.ui.theme.Gap
 import com.bingyan.bbhust.ui.theme.ImageSize
@@ -72,7 +73,7 @@ fun BrowserScreen(nav: NavHostController, url: String, service: Boolean = false)
             .fillMaxSize()
     ) {
         TitleSpacer()
-        val activity = LocalActivity.current
+        val ctx = LocalContext.current
         Header(
             title.value,
             subtitle = if (service) string(R.string.verified_link) else uri.value,
@@ -85,7 +86,7 @@ fun BrowserScreen(nav: NavHostController, url: String, service: Boolean = false)
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .clickable {
-                                activity.browseExternal(uri.value)
+                                ctx.browseExternal(uri.value)
                             }
                             .size(ImageSize.Mid)
                             .padding(Gap.Tiny),
@@ -116,7 +117,10 @@ fun BrowserScreen(nav: NavHostController, url: String, service: Boolean = false)
             )
         }
         val scope = rememberCoroutineScope()
-        AndroidView(modifier = Modifier.fillMaxSize(),
+        AndroidView(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("webView"),
             factory = { ctx ->
                 val web = WebView(ctx).apply {
                     //setLayerType(View.LAYER_TYPE_SOFTWARE, null)

@@ -78,7 +78,6 @@ android {
     }
 }
 dependencies {
-    implementation(project(":richtext"))
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 

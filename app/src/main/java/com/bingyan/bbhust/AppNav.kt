@@ -17,6 +17,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.bingyan.bbhust.ui.provider.LocalNav
 import com.bingyan.bbhust.ui.screen.browser.BrowserScreen
+import com.bingyan.bbhust.ui.screen.feed.FeedScreen
 import com.bingyan.bbhust.ui.screen.index.AppScaffold
 import com.bingyan.bbhust.ui.screen.login.LoginScreen
 import com.bingyan.bbhust.utils.LOGIN_URL
@@ -26,7 +27,6 @@ import com.bingyan.bbhust.utils.kv
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
-import java.net.ServerSocket
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -35,7 +35,6 @@ fun AppNav(nav: NavHostController = rememberAnimatedNavController()) {
         navController = nav,
         startDestination = kv.token.isNullOrBlank().ifElse(AppRoute.LOGIN, AppRoute.MAIN)
     ) {
-        ServerSocket()
         animateCompose(
             AppRoute.MAIN,
         ) {
@@ -57,6 +56,20 @@ fun AppNav(nav: NavHostController = rememberAnimatedNavController()) {
             listOf(navArgument("url") { type = NavType.StringType })
         ) {
             BrowserScreen(nav = nav, url = it.arguments?.getString("url") ?: "", service = true)
+        }
+
+        animateCompose(
+            AppRoute.POST+"/{id}",
+            listOf(navArgument("id"){type= NavType.StringType})
+        ){
+                FeedScreen(id = it.arguments?.getString("id")?:"", nav =nav , reply = false)
+        }
+
+        animateCompose(
+            AppRoute.POST_REPLY+"/{id}",
+            listOf(navArgument("id"){type= NavType.StringType})
+        ){
+            FeedScreen(id = it.arguments?.getString("id")?:"", nav =nav , reply = true)
         }
 //        animateCompose(
 //            AppRoute.memory("{id}"),
