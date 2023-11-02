@@ -119,6 +119,7 @@ class AppDialog(title: String? = null, message: String? = null) {
         Box {
             if (show) {
                 Dialog(onDismissRequest = {
+                    composable.clear()
                     onDismissRequest()
                 }, properties = properties) {
                     Column(
@@ -140,9 +141,11 @@ class AppDialog(title: String? = null, message: String? = null) {
                                     .padding(16.dp)
                             ) {
                                 negativeButton {
+                                    composable.clear()
                                     onDismissRequest()
                                 }
                                 positiveButton {
+                                    composable.clear()
                                     onDismissRequest()
                                 }
                             }

@@ -6,7 +6,9 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavHostController
 import com.bingyan.bbhust.ui.viewer.ImageViewerManger
+import com.bingyan.bbhust.ui.widgets.AppDialog
 import com.bingyan.bbhust.ui.widgets.SnackHostState
+import com.bingyan.bbhust.ui.widgets.sheet.AppBottomSheetDialog
 
 inline fun <reified T> localProvider(): ProvidableCompositionLocal<T> {
     return compositionLocalOf {
@@ -25,3 +27,5 @@ val LocalPicker = localProvider<ActivityResultLauncher<ChooseFiles>>()
 val LocalGalley = localStaticProvider<ImageViewerManger>()
 val LocalShare = localStaticProvider<ShareProvider>()
 val LocalSnack = localProvider<SnackHostState>()
+val LocalDialog = localProvider<AppDialog>()
+val LocalBottomDialog = localProvider<AppBottomSheetDialog>()
