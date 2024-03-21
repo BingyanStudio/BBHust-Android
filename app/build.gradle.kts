@@ -45,6 +45,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            manifestPlaceholders["getui_name"] = "com.bingyan.bbhust2"
             resValue("string", "app_name", "BBHust")
             setProguardFiles(
                 listOf(
@@ -54,6 +55,7 @@ android {
             )
         }
         debug {
+            manifestPlaceholders["getui_name"] = "com.bingyan.bbhust2_dev"
             applicationIdSuffix = ".dev"
             resValue("string", "app_name", "BBHust Dev")
         }

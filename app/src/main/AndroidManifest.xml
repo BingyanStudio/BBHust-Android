@@ -22,10 +22,10 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.GET_TASKS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="getui.permission.GetuiService.com.bingyan.bbhust" />
+    <uses-permission android:name="getui.permission.GetuiService.${getui_name}" />
 
     <permission
-        android:name="getui.permission.GetuiService.com.bingyan.bbhust2"
+        android:name="getui.permission.GetuiService.${getui_name}"
         android:protectionLevel="signature" />
 
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
