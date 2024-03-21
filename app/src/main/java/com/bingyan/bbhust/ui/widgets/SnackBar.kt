@@ -6,10 +6,14 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -61,10 +65,13 @@ fun AppSnack(
     CompositionLocalProvider(
         LocalSnack provides hostState
     ) {
-        Box(modifier = Modifier) {
-            content()
+        content()
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(top = Gap.Big * 5)) {
             SnackbarHost(hostState = hostState) {
-                // todo: snackbar content
+                AppSnackBar(data = it)
             }
         }
     }
@@ -99,20 +106,22 @@ fun SnackbarHost(
 fun AppSnackBar(data: SnackData) {
     Row(
         modifier = Modifier
-            .shadow(6.dp, CardShapes.large)
-            .background(
-                when (data.level) {
-                    SnackLevel.Info -> colors.info
-                    SnackLevel.Warn -> colors.warn
-                    SnackLevel.Failed -> colors.error
-                    SnackLevel.Success -> colors.success
-                    SnackLevel.Normal -> colors.primary
-                }, CardShapes.large
-            )
-            .padding(vertical = Gap.Mid, horizontal = Gap.Big),
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
     ) {
         Column(
-            Modifier,
+            Modifier
+                .shadow(6.dp, CardShapes.large)
+                .background(
+                    when (data.level) {
+                        SnackLevel.Info -> colors.info
+                        SnackLevel.Warn -> colors.warn
+                        SnackLevel.Failed -> colors.error
+                        SnackLevel.Success -> colors.success
+                        SnackLevel.Normal -> colors.primary
+                    }, CardShapes.large
+                )
+                .padding(vertical = Gap.Mid, horizontal = Gap.Big),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
