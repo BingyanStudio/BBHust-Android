@@ -1,5 +1,6 @@
 package com.bingyan.bbhust.ui.widgets.sheet
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,6 +22,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,54 +52,32 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterialApi::class)
-class AppBottomSheetDialog()
-{
-    private val showBottomSheet = mutableStateOf(ShowBottomSheet(
-        show = mutableStateOf(false),
-        onDismiss = {},
-        draggable= mutableStateOf(false),
-        state= BottomSheetDialogState(BottomSheetDialogValue.Hide),
-        peek = 0.8f,
-        content= @Composable{}
-    ))
-
-    fun setState(
-        show: Boolean,
-        onDismiss: () -> Unit,
-        draggable: Boolean,
-        state: BottomSheetDialogState,
-        peek: Float = 0.8f,
-        content: @Composable (NavHostController) -> Unit
-    ){
-        showBottomSheet.value = ShowBottomSheet(
-            mutableStateOf(show),
-            onDismiss,
-            mutableStateOf(draggable),
-            state,
-            peek,
-            content
-        )
-    }
+class AppBottomSheetDialog {
     @Composable
     fun Build(
-        state: ShowBottomSheet = showBottomSheet.value,
-        nav: NavHostController
+        show: Boolean,
+        state: ShowBottomSheet,
+        content: @Composable ()->Unit
     ) {
-        if (state.show.value) {
+        content()
+        LaunchedEffect(state.state.currentValue) {
+            if (state.state.currentValue == BottomSheetDialogValue.Hide) {
+                state.onDismiss()
+            }
+        }
             Surface(color = Transparent) {
                 AnimatedVisibility(
-                    visible = state.show.value, enter = fadeIn(), exit = fadeOut()
+                    visible = show, enter = fadeIn(), exit = fadeOut()
                 ) {
                     Spacer(modifier = Modifier
                         .background(Color.Black.copy(0.4f))
                         .fillMaxSize()
                         .click {
-                            state.show.value = false
                             state.onDismiss()
                         })
                 }
             }
-            AnimatedVisibility(visible = state.show.value, enter = slideInVertically {
+            AnimatedVisibility(visible = show, enter = slideInVertically {
                 it
             }, exit = slideOutVertically {
                 it
@@ -111,11 +91,10 @@ class AppBottomSheetDialog()
                     sheetGesturesEnabled = state.draggable.value,
                     sheetElevation = 0.dp
                 ) {
-                    state.content(nav)
+                    state.content(state.onDismiss)
                 }
 
             }
-        }
     }
 
     @Composable
@@ -196,12 +175,11 @@ class AppBottomSheetDialog()
 }
 
 data class ShowBottomSheet(
-    val show: MutableState<Boolean>,
     val onDismiss: () -> Unit,
     val draggable: MutableState<Boolean>,
-    val state: BottomSheetDialogState,
+    val state:BottomSheetDialogState,
     val peek: Float = 0.8f,
-    val content: @Composable (NavHostController) -> Unit
+    val content: @Composable (onDismiss:()->Unit) -> Unit
 )
 
 enum class BottomSheetDialogValue {
