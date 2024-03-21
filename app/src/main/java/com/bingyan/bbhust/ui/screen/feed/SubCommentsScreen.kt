@@ -20,9 +20,11 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,20 +40,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bingyan.bbhust.AppRoute
 import com.bingyan.bbhust.R
 import com.bingyan.bbhust.ReplyQuery
+import com.bingyan.bbhust.base.TriState
 import com.bingyan.bbhust.ui.provider.LocalNav
 import com.bingyan.bbhust.ui.provider.jump
 import com.bingyan.bbhust.ui.theme.*
 import com.bingyan.bbhust.ui.widgets.*
 import com.bingyan.bbhust.ui.widgets.app.ActionData
 import com.bingyan.bbhust.ui.widgets.sheet.BottomSheetDialogState
+import com.bingyan.bbhust.utils.apollo
 import com.bingyan.bbhust.utils.click
+import com.bingyan.bbhust.utils.defaultErrorHandler
 import com.bingyan.bbhust.utils.ext.*
+import com.bingyan.bbhust.utils.onSuccess
 import com.bingyan.bbhust.utils.string
+import kotlinx.coroutines.CoroutineScope
 //import com.bingyan.markdown.MarkdownParagraph
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,38 +69,54 @@ import kotlinx.coroutines.withContext
 fun SubCommentScreen(
     draggable: MutableState<Boolean>,
     state: BottomSheetDialogState,
-    show: MutableState<Boolean>,
-    sid: String,
-    feedId: String,
+    sid: String?,
     vm: FeedViewModel = viewModel(),
     onDismiss: () -> Unit
 ) {
+    if(sid==null){
+        return
+    }
 
     val highlight = remember {
-        mutableStateOf(-1)
+        mutableIntStateOf(-1)
     }
+
+    //控制菜单的弹出
     val more = remember {
         mutableStateOf(false)
     }
+
+    //控制选择弹出菜单的回复
     val replyMore = remember {
         mutableStateOf<Reply?>(null)
     }
     val scope = rememberCoroutineScope { Dispatchers.IO }
-    val reply: MutableState<ReplyQuery.Reply?> = remember {
+
+    //当前回复
+    val reply: MutableState<ReplyQuery.Reply?> = remember{
         mutableStateOf(null)
     }
-    val loadingStats = remember {
-        mutableStateOf(true)
+
+    //当前评论界面的加载状态
+    val subCommentState: MutableState<TriState> = remember {
+        mutableStateOf(TriState.Loading)
     }
-    LaunchedEffect(sid) {
-        TODO("vm.subComments(sid, reply, loadingStats)")
+
+    //当前评论界面的排序
+    val subCommentDesc = remember {
+        mutableStateOf(CommentDesc.NewOrder)
     }
-    val commentsMap: HashMap<String, Int> = hashMapOf()
+
+    //不同的回复对应不同的索引
+    val commentsIndexMap: HashMap<String, Int> = hashMapOf()
+
+    //控制长列表的状态
     val stats = rememberLazyListState()
     val feedDesc = vm.state.commentDesc
-    val commentDesc = remember {
-        mutableStateOf(false)
-    }
+
+    //加载整个回复
+    loadReply(scope,sid,reply, subCommentState)
+
     LaunchedEffect(stats) {
         snapshotFlow {
             Pair(
@@ -102,13 +126,16 @@ fun SubCommentScreen(
             draggable.value = it
         }
     }
+
     BackHandler {
         if (state.isExpanded) {
             scope.launch {
                 state.collapse()
             }
         } else {
-            show.value = false
+            vm.act {
+                FeedAction.CloseSubCommentScreen
+            }
             onDismiss()
         }
     }
@@ -123,84 +150,99 @@ fun SubCommentScreen(
                 .navigationBarsPadding()) {
             //顶栏
             Header(name = R.string.comment.string) {
-                show.value = false
+                vm.act {
+                    FeedAction.CloseSubCommentScreen
+                }
                 onDismiss()
             }
             LazyColumn(
                 Modifier.fillMaxSize(), state = stats
             ) {
-                item {
-                    reply.value?.let {
-                        MainCommentCard(
-                            post = it, show = show,
-                            author = vm.state.feed?.author?.id,
-                            onLike = { like ->
+                if (subCommentState.value == TriState.Idle) {
+                    item {
+                        reply.value?.let {
+                            MainCommentCard(
+                                post = it,
+                                author = vm.state.feed?.author?.id,
+                                onLike = { like ->
                                     vm.act {
-                                        FeedAction.LikeReply(it.id,like,feedDesc)
+                                        FeedAction.LikeReply(it.id, like, feedDesc)
                                     }
                                 },
-                            onLongClick = {
-                                //长按菜单
-                                replyMore.value = Reply(
-                                    it.id, it.author.id, it.content
-                                )
-                                more.value = true
-                            },
-                        ) { _ ->
-                            //主回复
-                        }
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(Gap.Big)
-                                .background(colors.background)
-                        )
-
-                        Row(
-                            modifier = Modifier
-                                .background(colors.card)
-                                .padding(
-                                    horizontal = Gap.Big, vertical = Gap.Mid
-                                )
-                                .fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = string(R.string.comment),
-                                color = colors.textPrimary,
-                                fontSize = 16.sp,
+                                state = state,
+                                onLongClick = {
+                                    //长按菜单
+                                    replyMore.value = Reply(
+                                        it.id, it.author.id, it.content
+                                    )
+                                    more.value = true
+                                },
+                            ) { _ ->
+                                //主回复
+                            }
+                            Spacer(
                                 modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(Gap.Big)
+                                    .background(colors.background)
                             )
-                            Spacer(Modifier.weight(1f))
+
                             Row(
-                                Modifier
-                                    .background(
-                                        colors.background,
-                                        RoundedCornerShape(50)
+                                modifier = Modifier
+                                    .background(colors.card)
+                                    .padding(
+                                        horizontal = Gap.Big, vertical = Gap.Mid
                                     )
-                                    .padding(Gap.Small),
-                                horizontalArrangement = Arrangement.spacedBy(Gap.Small)
+                                    .fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                @Composable
-                                fun capsule(value: String, selected: Boolean, onClick: () -> Unit) {
-                                    Text(
-                                        text = value,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(50))
-                                            .clickable { onClick() }
-                                            .background(if (selected) colors.card else colors.background)
-                                            .padding(
-                                                horizontal = Gap.Mid,
-                                                vertical = Gap.Tiny
-                                            )
-                                    )
-                                }
-                                capsule(value = "最新", commentDesc.value) {
-                                    commentDesc.value = true
-                                }
-                                capsule(value = "时间轴", !commentDesc.value) {
-                                    commentDesc.value = false
+                                Text(
+                                    text = string(R.string.comment),
+                                    color = colors.textPrimary,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Row(
+                                    Modifier
+                                        .background(
+                                            colors.background,
+                                            RoundedCornerShape(50)
+                                        )
+                                        .padding(Gap.Small),
+                                    horizontalArrangement = Arrangement.spacedBy(Gap.Small)
+                                ) {
+                                    @Composable
+                                    fun capsule(
+                                        value: String,
+                                        selected: Boolean,
+                                        onClick: () -> Unit
+                                    ) {
+                                        Text(
+                                            text = value,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(50))
+                                                .clickable { onClick() }
+                                                .background(if (selected) colors.card else colors.background)
+                                                .padding(
+                                                    horizontal = Gap.Mid,
+                                                    vertical = Gap.Tiny
+                                                )
+                                        )
+                                    }
+                                    capsule(
+                                        value = "最新",
+                                        subCommentDesc.value == CommentDesc.NewOrder
+                                    ) {
+                                        subCommentDesc.value = CommentDesc.NewOrder
+                                    }
+                                    capsule(
+                                        value = "时间轴",
+                                        subCommentDesc.value == CommentDesc.TimeOrder
+                                    ) {
+                                        subCommentDesc.value = CommentDesc.TimeOrder
+                                    }
                                 }
                             }
                         }
@@ -210,21 +252,23 @@ fun SubCommentScreen(
                 val parent = reply.value
                 val comments = reply.value?.sub_reply
                 val commentsReversed = reply.value?.sub_reply?.asReversed()
-                if (parent != null && comments != null && commentsReversed != null) {
+                if (parent != null && comments != null && commentsReversed != null && subCommentState.value == TriState.Idle) {
                     itemsIndexed(
-                        if (commentDesc.value) commentsReversed else comments,
-                        key = { index, it -> commentsMap[it.id] = index; it.hashCode() }) { i, it ->
+                        if (subCommentDesc.value == CommentDesc.NewOrder) commentsReversed else comments,
+                        key = { index, it ->
+                            commentsIndexMap[it.id] = index; it.hashCode()
+                        }) { i, it ->
                         SelfCommentCard(post = it,
                             author = vm.state.feed?.author?.id,
                             highlight = highlight,
                             index = i,
-                            show = show,
                             parent = parent,
                             onLike = { like ->
-                                     vm.act {
-                                         FeedAction.LikeReply(it.id,like,feedDesc)
-                                     }
+                                vm.act {
+                                    FeedAction.LikeReply(it.id, like, feedDesc)
+                                }
                             },
+                            state = state,
                             onLongClick = {
                                 //长按菜单
                                 replyMore.value = Reply(
@@ -234,11 +278,11 @@ fun SubCommentScreen(
                             },
                             onRefClick = { ref ->
                                 scope.launch {
-                                    val index = commentsMap[ref]
+                                    val index = commentsIndexMap[ref]
                                     if (index != null) {
                                         withContext(Dispatchers.Main) {
                                             stats.animateScrollToItem(index)
-                                            highlight.value = index
+                                            highlight.intValue = index
                                         }
                                     }
                                 }
@@ -254,7 +298,7 @@ fun SubCommentScreen(
                             .padding(vertical = Gap.Big * 2),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (loadingStats.value) {
+                        if (subCommentState.value == TriState.Loading) {
                             LoadingBar()
                         } else {
                             Text(
@@ -270,11 +314,11 @@ fun SubCommentScreen(
                 }
             }
         }
-        ReplyScreen {
-            scope.launch {
-                TODO("vm.subComments(sid, reply, loadingStats)")
-            }
-        }
+        //ReplyScreen {
+        //    scope.launch {
+        //       TODO("vm.subComments(sid, reply, loadingStats)")
+        //    }
+        //}
         //MenuSurface(more, "", replyMore.value)
     }
     LaunchedEffect(vm.state.isReply, more.value) {
@@ -292,9 +336,10 @@ fun SubCommentScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainCommentCard(
+    vm: FeedViewModel = viewModel(),
     post: ReplyQuery.Reply,
+    state: BottomSheetDialogState,
     author: String?,
-    show: MutableState<Boolean>,
     onLike: (Boolean) -> Unit,
     onLongClick: () -> Unit,
     onClick: (ReplyQuery.Reply) -> Unit
@@ -313,7 +358,9 @@ fun MainCommentCard(
                 contentDescription = stringResource(id = R.string.avatar),
                 modifier = Modifier
                     .click {
-                        show.value = false
+                        vm.act {
+                            FeedAction.CloseSubCommentScreen
+                        }
                         nav.jump(AppRoute.user(post.author.id))
                     }
                     .size(ImageSize.Normal)
@@ -322,7 +369,8 @@ fun MainCommentCard(
             Spacer(modifier = Modifier.size(Gap.Mid))
             Column {
                 //昵称
-                Row(modifier = Modifier.fillMaxWidth(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -332,8 +380,9 @@ fun MainCommentCard(
                     )
                     Spacer(modifier = Modifier.width(Gap.Mid))
                     //BB鸡的AI提醒
-                    if(post.author.id == "6422d2016f6eee4d08cf38ad")
-                        Text(text = "机器人",
+                    if (post.author.id == "6422d2016f6eee4d08cf38ad")
+                        Text(
+                            text = "机器人",
                             fontSize = 11.sp,
                             color = Color.White,
                             modifier = Modifier
@@ -409,17 +458,39 @@ fun MainCommentCard(
     }
 }
 
+private fun loadReply(
+    scope: CoroutineScope,
+    sid: String,
+    reply: MutableState<ReplyQuery.Reply?>,
+    subCommentState: MutableState<TriState>
+) {
+    scope.launch {
+        delay(500)
+        apollo().query(ReplyQuery(sid))
+            .toFlow()
+            .onSuccess {
+                reply.value = it.reply
+                subCommentState.value = TriState.Idle
+            }
+            .defaultErrorHandler {
+                subCommentState.value = TriState.Error(it)
+            }
+            .launchIn(this).start()
+    }
+}
+
 /**
  * 用户评论
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SelfCommentCard(
+    vm: FeedViewModel = viewModel(),
     parent: ReplyQuery.Reply,
     author: String?,
-    show: MutableState<Boolean>,
+    state: BottomSheetDialogState,
     post: ReplyQuery.Sub_reply,
-    highlight: MutableState<Int> = mutableStateOf(-1),
+    highlight: MutableState<Int> = mutableIntStateOf(-1),
     index: Int = -1,
     onLike: (Boolean) -> Unit,
     onLongClick: () -> Unit,
@@ -435,7 +506,7 @@ private fun SelfCommentCard(
     val bgAnima = animateColorAsState(
         targetValue = backgroundColor.value, animationSpec = tween(
             340, 0, FastOutSlowInEasing
-        )
+        ), label = ""
     )
     LaunchedEffect(highlight) {
         snapshotFlow { highlight.value }.filter { highlight.value != -1 && highlight.value == index }
@@ -465,7 +536,9 @@ private fun SelfCommentCard(
                     .size(ImageSize.Normal)
                     .clip(RoundedShapes.medium)
                     .click {
-                        show.value = false
+                        vm.act {
+                            FeedAction.CloseSubCommentScreen
+                        }
                         nav.jump(AppRoute.user(post.author.id))
                     },
                 scale = ContentScale.Crop

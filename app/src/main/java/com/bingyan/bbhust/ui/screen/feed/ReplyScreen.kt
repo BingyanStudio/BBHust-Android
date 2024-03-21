@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,16 +22,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bingyan.bbhust.R
+import com.bingyan.bbhust.ui.provider.LocalLoading
+import com.bingyan.bbhust.ui.provider.localProvider
+import com.bingyan.bbhust.ui.theme.CardShapes
 import com.bingyan.bbhust.ui.theme.CardShapesTopHalf
 import com.bingyan.bbhust.ui.theme.Gap
 import com.bingyan.bbhust.ui.theme.black
@@ -39,13 +45,17 @@ import com.bingyan.bbhust.ui.widgets.PlainTextField
 import com.bingyan.bbhust.ui.widgets.StaggeredVerticalGrid
 import com.bingyan.bbhust.utils.click
 import com.bingyan.bbhust.utils.string
+import com.bingyan.bbhust.utils.wrap
 
 @Composable
 fun ReplyScreen(
 	vm: FeedViewModel = viewModel(),
 	onSuccess: () -> Unit = {},
+	content : @Composable ()->Unit
 ) {
 	val reply = vm.state.isReply
+
+	content()
 	AnimatedVisibility(
 		visible = reply,
 		enter = fadeIn(),
@@ -54,9 +64,9 @@ fun ReplyScreen(
 		Spacer(
 			Modifier
 				.fillMaxSize()
-				.background(black.copy(0.4f))
+				.background(black.copy(0.2f))
 				.click {
-					vm.state=vm.state.copy(isReply = false)
+					vm.state = vm.state.copy(isReply = false)
 				},
 		)
 	}
@@ -85,10 +95,8 @@ private fun ReplyCard(
 	onSuccess: () -> Unit = {},
 	vm: FeedViewModel = viewModel(),
 ) {
-	val replyCurrentMutable = remember {
-		vm.state.replyCurrent
-	}
-	val replyCurrent = replyCurrentMutable ?: return
+	val replyCurrent =vm.state.replyCurrent ?: return
+	val loading = LocalLoading.current
 	Box(
 		Modifier.fillMaxWidth(),
 		contentAlignment = Alignment.BottomCenter
@@ -100,33 +108,13 @@ private fun ReplyCard(
 				.background(colors.card)
 				.fillMaxWidth()
 				.imePadding()
+				.border(
+					width = 0.3.dp,
+					color = Color.Black.copy(0.2f),
+					shape = CardShapesTopHalf.large
+				)
 		) {
-			Row(
-				Modifier
-					.fillMaxWidth()
-					.padding(start = Gap.Big),
-				verticalAlignment = Alignment.CenterVertically
-			) {
-				Text(
-					text = string(R.string.comment),
-					color = colors.textPrimary,
-					fontSize = 18.sp,
-					modifier = Modifier.padding(vertical = Gap.Big)
-				)
-				Spacer(modifier = Modifier.weight(1f))
-				Text(
-					text = string(R.string.publish),
-					color = colors.primary,
-					fontSize = 18.sp,
-					modifier = Modifier
-						.clickable {
-							vm.act {
-								FeedAction.Publish(replyAt = vm.state.replyCurrent?.replyAt,onSuccess)
-							}
-						}
-						.padding(Gap.Big)
-				)
-			}
+			Spacer(modifier = Modifier.height(Gap.Big))
 			ReferenceCard(replyCurrent.span)
 			Spacer(modifier = Modifier.height(Gap.Mid))
 			PlainTextField(
@@ -169,6 +157,46 @@ private fun ReplyCard(
 					}
 				}
 				**/
+			}
+
+			Row(
+				Modifier
+					.fillMaxWidth()
+					.padding( Gap.Big,),
+				verticalAlignment = Alignment.CenterVertically
+			) {
+//				Text(
+//					text = string(R.string.comment),
+//					color = colors.textPrimary,
+//					fontSize = 18.sp,
+//					modifier = Modifier.padding(vertical = Gap.Big)
+//				)
+				Spacer(modifier = Modifier.weight(1f))
+				Row (Modifier.clip(CardShapes.medium)
+					.background(color = colors.primary)
+					.clickable {
+						loading
+							.setState(
+								msg = string(R.string.waiting),
+								onDismiss = {},
+								content = {}
+							)
+							.show(true)
+						vm.act {
+							FeedAction.Publish(replyAt = vm.state.replyCurrent?.replyAt, onSuccess = onSuccess, onFailed = {
+								loading.show(false)
+							} ,onCompletion = {
+								loading.show(false)
+							})
+						}
+					}
+					.padding(top = 6.dp, bottom = 6.dp, start = 14.dp, end = 14.dp)){
+					Text(
+						text = string(R.string.publish),
+						color = Color.White,
+						fontSize = 14.sp
+					)
+				}
 			}
 		}
 	}

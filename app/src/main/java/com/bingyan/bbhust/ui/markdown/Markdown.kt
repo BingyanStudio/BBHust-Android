@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,13 +32,13 @@ fun MarkdownView(
     markdown: String,
     modifier: Modifier = Modifier,
     finished: () -> Unit = {},
-    viewHeight: MutableState<Int> = mutableStateOf(0)
+    viewHeight: MutableState<Int> = mutableIntStateOf(0)
 ) {
     val data = remember {
         mutableStateOf("")
     }
     val lastCode = remember {
-        mutableStateOf(data.value.hashCode())
+        mutableIntStateOf(data.value.hashCode())
     }
 //    val webView = LocalWebView.current
     val nightMode = colors == DarkColorPalette
@@ -46,7 +47,7 @@ fun MarkdownView(
             val raw = App.CONTEXT.assets.open("markdown/index.html").readBytes().decodeToString()
             val (head, tail) = raw.split("{{Markdown}}")
             val html = (head + markdown + tail)
-            lastCode.value = data.value.hashCode()
+            lastCode.intValue = data.value.hashCode()
             if (nightMode) {
                 data.value = html.replaceFirst("github-markdown.css", "github-markdown-dark.css")
             } else {
@@ -54,7 +55,6 @@ fun MarkdownView(
             }
         }
     }
-    val scope = rememberCoroutineScope()
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
@@ -67,15 +67,15 @@ fun MarkdownView(
             ) { _, target ->
                 val targetV = target.height
                 if (targetV > 0) {
-                    finished()
                     viewHeight.value = targetV
+                    finished()
                 }
             }
     ) {
         val imageViewerManger = LocalGalley.current
         val uriHandler = LocalUriHandler.current
         AndroidView(factory = { WebViewProvider(it, imageViewerManger, uriHandler).web }) { web ->
-            if (data.value.hashCode() != lastCode.value && data.value.isNotBlank()) {
+            if (data.value.hashCode() != lastCode.intValue && data.value.isNotBlank()) {
                 web.loadDataWithBaseURL(
                     baseUrl,
                     data.value,
@@ -83,10 +83,6 @@ fun MarkdownView(
                     null,
                     null
                 )
-                scope.launch {
-                    delay(300)
-                    finished()
-                }
             }
         }
     }

@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -43,24 +44,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.bingyan.bbhust.App
 import com.bingyan.bbhust.PostQuery
 import com.bingyan.bbhust.R
 import com.bingyan.bbhust.RepliesQuery
 import com.bingyan.bbhust.base.FourState
+import com.bingyan.bbhust.base.TriState
 import com.bingyan.bbhust.ui.markdown.MarkdownView
+import com.bingyan.bbhust.ui.provider.LocalBottomDialog
 import com.bingyan.bbhust.ui.provider.LocalSnack
 import com.bingyan.bbhust.ui.theme.*
 import com.bingyan.bbhust.ui.widgets.*
 import com.bingyan.bbhust.ui.widgets.app.ActionData
+import com.bingyan.bbhust.ui.widgets.sheet.BottomSheetDialogState
+import com.bingyan.bbhust.ui.widgets.sheet.BottomSheetDialogValue
+import com.bingyan.bbhust.ui.widgets.sheet.ShowBottomSheet
 import com.bingyan.bbhust.utils.click
 import com.bingyan.bbhust.utils.ext.*
 import com.bingyan.bbhust.utils.string
 import com.bingyan.bbhust.utils.toggle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import moe.tlaster.nestedscrollview.rememberNestedScrollViewState
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -70,29 +76,28 @@ fun FeedScreen(
     reply: Boolean,
     vm: FeedViewModel = viewModel(),
 ) {
+    //全局工具
     val snack = LocalSnack.current
-    val state=vm.state
+
+    val state = vm.state
     val finished = remember {
-        mutableStateOf(vm.state.feed != null)
+        mutableStateOf(false)
     }
     val commentDesc = state.commentDesc
-    val feed =  state.feed
+    val feed = state.feed
     LaunchedEffect(id) {
         //载入帖子
         vm.act(FeedAction.LoadFeed(id) {
-            snack.showSnackbar("加载成功")
+
         })
     }
-    if(feed!=null) {
-        LaunchedEffect(id) {
-            feed.id.let {
-                vm.act(
-                    FeedAction.GetMoreReplies(
-                        id = it, sort = NEWLINE, state = FourState.OnMore
-                    )
-                )
-            }
-        }
+    LaunchedEffect(id) {
+        vm.act(
+            FeedAction.GetMoreReplies(
+                id = id, commentDesc = commentDesc, state = FourState.OnMore
+            )
+        )
+
     }
     val toReply = remember {
         mutableStateOf(!reply)
@@ -113,8 +118,8 @@ fun FeedScreen(
     val refreshState = rememberPullRefreshState(refreshing = isRefresh,
         onRefresh = {
             vm.act {
-                FeedAction.RefreshAll(FourState.Loading,commentDesc,id){
-                    snack.showSnackbar("加载成功")
+                FeedAction.RefreshAll(id) {
+                    snack.showSnackbar(string(R.string.refreshed))
                 }
             }
         })
@@ -123,9 +128,7 @@ fun FeedScreen(
     val html = remember { mutableStateOf("") }
     LaunchedEffect(feed?.content) {
         if (content != null) {
-            val raw = App.CONTEXT.assets.open("markdown/index.html").readBytes().decodeToString()
-            val (head, tail) = raw.split("{{Markdown}}")
-            html.value = head + content + tail
+            html.value = content
         }
     }
     LaunchedEffect(viewHeight.intValue) {
@@ -135,355 +138,389 @@ fun FeedScreen(
             }
         }
     }
-    val comments = if (commentDesc == LANDLORD || commentDesc == TIMELINE) vm.state.timelineList
-        .run {
-        val author = feed?.author?.id
-        if (commentDesc == LANDLORD && author != null) {
-            filter { it.author.id == author }
-        } else {
-            this
-        }
-    }
-    else vm.state.newlineList
+
+    val comments = state.replies[commentDesc]!!
+
     Surface(color = Transparent) {
-            Column(
-                Modifier
-                    .navigationBarsPadding()
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TitleSpacer()
-                Header(name = string(R.string.feed), onDoubleTap = {
-                    scope.launch {
-                        vm.state.listState.animateScrollTo(0)
-                    }
-                }, navController = nav, forward = {
-                    EasyImage(src = R.drawable.more_2_fill,
-                        contentDescription = stringResource(id = R.string.more),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .clickable {
-                                replyMore.value = null
-                                more.value = true
-                            }
-                            .padding(Gap.Small)
-                            .size(ImageSize.Mid),
-                        tint = colors.textPrimary)
-                }) {
-                    nav.popBackStack()
-                }
-                Box(
-                    Modifier
-                        .pullRefresh(refreshState)
-                        .weight(1f),
-                    contentAlignment = Alignment.TopCenter
-                ) {
+        Dialogs(nav = nav) {
+            BottomSliders(nav = nav) {
                 Column(
-                    modifier = Modifier
-                        .background(colors.card)
-                        .verticalScroll(vm.state.listState)
+                    Modifier
+                        .navigationBarsPadding()
                         .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AnimatedVisibility(!finished.value, exit = shrinkVertically()) {
-                        val tips = remember {
-                            mutableStateOf(Tips.make())
+                    TitleSpacer()
+                    Header(name = string(R.string.feed), onDoubleTap = {
+                        scope.launch {
+                            vm.state.listState.animateScrollTo(0)
                         }
-                        Row(
-                            Modifier
-                                .background(colors.background)
-                                .padding(horizontal = Gap.Big)
-                                .padding(vertical = Gap.Big)
-                                .clip(CardShapes.small)
-                                .click {
-                                    tips.value = Tips.make()
-                                }
-                                .fillMaxWidth()
-                                .background(colors.card)
-                                .padding(vertical = Gap.Mid),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            LoadingBar(size = LoadingBarSize.Tiny)
-                            Spacer(modifier = Modifier.width(Gap.Mid))
-                            Text(
-                                text = tips.value, color = colors.secondary, fontSize = 14.sp
-                            )
-                        }
-                    }
-                    if (finished.value) {
-                        feed?.let { UserCard(post = it) }
-                    }
-                    if (feed != null) {
-                        MarkdownView(
-                            html.value,
+                    }, navController = nav, forward = {
+                        EasyImage(src = R.drawable.more_2_fill,
+                            contentDescription = stringResource(id = R.string.more),
                             modifier = Modifier
-                                .padding(horizontal = Gap.Big)
-                                .alpha(if (finished.value) 1f else 0f),
-                            { finished.value = true },
-                            viewHeight
-                        )
+                                .clip(RoundedCornerShape(50))
+                                .clickable {
+                                    replyMore.value = null
+                                    more.value = true
+                                }
+                                .padding(Gap.Small)
+                                .size(ImageSize.Mid),
+                            tint = colors.textPrimary)
+                    }) {
+                        nav.popBackStack()
                     }
-                    if (finished.value) {
-                        val cmt = comments
-
-                        if (feed != null) {
-//                                item {
-                            Spacer(modifier = Modifier.height(Gap.Big))
-                            Spacer(
-                                modifier = Modifier
-                                    .background(colors.background)
-                                    .height(Gap.Mid)
-                                    .fillMaxWidth()
-                            )
-
-                            Row(
-                                modifier = Modifier
-                                    .background(colors.card)
-                                    .padding(
-                                        horizontal = Gap.Big, vertical = Gap.Mid
-                                    )
-                                    .fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = string(R.string.comment),
-                                    color = colors.textPrimary,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier
-                                )
-                                Spacer(Modifier.weight(1f))
+                    Box(
+                        Modifier
+                            .pullRefresh(refreshState)
+                            .weight(1f),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .background(colors.card)
+                                .verticalScroll(vm.state.listState)
+                                .fillMaxSize(),
+                        ) {
+                            AnimatedVisibility(!finished.value, exit = shrinkVertically()) {
+                                val tips = remember {
+                                    mutableStateOf(Tips.make())
+                                }
                                 Row(
                                     Modifier
-                                        .background(
-                                            colors.background, RoundedCornerShape(50)
-                                        )
-                                        .padding(Gap.Small),
-                                    horizontalArrangement = Arrangement.spacedBy(Gap.Small)
-                                ) {
-                                    @Composable
-                                    fun capsule(
-                                        value: String, selected: Boolean, onClick: () -> Unit
-                                    ) {
-                                        Text(text = value,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(50))
-                                                .clickable { onClick() }
-                                                .background(if (selected) colors.card else colors.background)
-                                                .padding(
-                                                    horizontal = Gap.Mid, vertical = Gap.Tiny
-                                                ),
-                                            color = colors.textPrimary
-                                        )
-                                    }
-                                    capsule(value = "最新", commentDesc == NEWLINE) {
-                                        feed.id.let {
-                                            vm.act {
-                                                FeedAction.RefreshAll(FourState.OnMore,NEWLINE, it)
-                                            }
+                                        .background(colors.background)
+                                        .padding(horizontal = Gap.Big)
+                                        .padding(vertical = Gap.Big)
+                                        .clip(CardShapes.small)
+                                        .click {
+                                            tips.value = Tips.make()
                                         }
-                                    }
-                                    capsule(value = "时间轴", commentDesc == TIMELINE) {
-                                        feed.id.let {
-                                            vm.act {
-                                                FeedAction.RefreshAll(FourState.OnMore,TIMELINE, it)
-                                            }
-                                        }
-                                    }
-                                    capsule(value = "楼主", commentDesc == LANDLORD) {
-                                        feed.id.let {
-                                            vm.act {
-                                                FeedAction.RefreshAll(FourState.OnMore,LANDLORD, it)
-                                            }
-                                        }
-                                    }
+                                        .fillMaxWidth()
+                                        .background(colors.card)
+                                        .padding(vertical = Gap.Mid),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    LoadingBar(size = LoadingBarSize.Tiny)
+                                    Spacer(modifier = Modifier.width(Gap.Mid))
+                                    Text(
+                                        text = tips.value,
+                                        color = colors.secondary,
+                                        fontSize = 14.sp
+                                    )
                                 }
                             }
-                        }
-                        cmt.forEach { item ->
-                            CommentCard(item,
-                                author = feed?.author?.id,
-                                onLike = { like ->
-                                    vm.act {
-                                        FeedAction.LikeReply(item.id, !like, commentDesc)
-                                    }
-                                },
-                                onComment = {
-                                    TODO("ReadMore")
-                                },
-                                onLongClick = {
-                                    //长按回复菜单
-                                    replyMore.value = Reply(
-                                        item.id, item.author.id, item.content
-                                    )
-                                    more.value = true
-                                }) {
-                                TODO("点击回复")
+                            if (finished.value) {
+                                feed?.let { UserCard(post = it) }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(Gap.Big))
-                        if (feed != null) {
-                            when (vm.state.feedState) {
-                                FourState.Idle(true) -> {
-                                    Box(
+                            MarkdownView(
+                                html.value,
+                                modifier = Modifier
+                                    .padding(horizontal = Gap.Big)
+                                    .alpha(if (finished.value) 1f else 0f),
+                                {
+                                    vm.viewModelScope.launch {
+                                        snack.showSnackbar(string(R.string.refreshed))
+                                    }
+                                    finished.value = true
+                                },
+                                viewHeight
+                            )
+                            if (finished.value) {
+                                val cmt = comments
+
+                                if (feed != null) {
+//                                item {
+                                    Spacer(modifier = Modifier.height(Gap.Big))
+                                    Spacer(
                                         modifier = Modifier
+                                            .background(colors.background)
+                                            .height(Gap.Mid)
                                             .fillMaxWidth()
-                                            .aspectRatio(4f),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = if (cmt.isEmpty()) string(R.string.no_comment)
-                                            else string(R.string.comment_count, cmt.size),
-                                            color = colors.textSecondary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-
-                                FourState.Idle(false) -> {
-                                    GetMoreButton(
-                                        id = id,
-                                        commentDesc = commentDesc
                                     )
-                                }
 
-                                else -> {
                                     Row(
                                         modifier = Modifier
+                                            .background(colors.card)
+                                            .padding(
+                                                horizontal = Gap.Big, vertical = Gap.Mid
+                                            )
                                             .fillMaxWidth(),
-                                        Arrangement.Center
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        LoadingBar()
+                                        Text(
+                                            text = string(R.string.comment),
+                                            color = colors.textPrimary,
+                                            fontSize = 16.sp,
+                                            modifier = Modifier
+                                        )
+                                        Spacer(Modifier.weight(1f))
+                                        Row(
+                                            Modifier
+                                                .background(
+                                                    colors.background, RoundedCornerShape(50)
+                                                )
+                                                .padding(Gap.Small),
+                                            horizontalArrangement = Arrangement.spacedBy(Gap.Small)
+                                        ) {
+                                            @Composable
+                                            fun capsule(
+                                                value: String,
+                                                selected: Boolean,
+                                                commentDesc: CommentDesc,
+                                            ) {
+                                                Text(text = value,
+                                                    fontSize = 12.sp,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(50))
+                                                        .clickable {
+                                                            feed.id.let {
+                                                                vm.act {
+                                                                    FeedAction.RefreshNew(
+                                                                        commentDesc
+                                                                    )
+                                                                }
+                                                                vm.act {
+                                                                    FeedAction.RefreshAll(it) {
+                                                                        snack.showSnackbar(string(R.string.refreshed))
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        .background(if (selected) colors.card else colors.background)
+                                                        .padding(
+                                                            horizontal = Gap.Mid,
+                                                            vertical = Gap.Tiny
+                                                        ),
+                                                    color = colors.textPrimary
+                                                )
+                                            }
+                                            capsule(
+                                                value = "最新", commentDesc == CommentDesc.NewOrder,
+                                                CommentDesc.NewOrder
+                                            )
+                                            capsule(
+                                                value = "时间轴",
+                                                commentDesc == CommentDesc.TimeOrder,
+                                                CommentDesc.TimeOrder
+                                            )
+                                            capsule(
+                                                value = "楼主",
+                                                commentDesc == CommentDesc.LandlordOrder,
+                                                CommentDesc.LandlordOrder
+                                            )
+                                        }
+                                    }
+                                }
+                                cmt.forEach { item ->
+                                    CommentCard(item,
+                                        author = feed?.author?.id,
+                                        onLike = { like ->
+                                            vm.act {
+                                                FeedAction.LikeReply(item.id, !like, commentDesc)
+                                            }
+                                        },
+                                        onComment = {
+
+                                        },
+                                        onLongClick = {
+                                            //长按回复菜单
+                                            replyMore.value = Reply(
+                                                item.id, item.author.id, item.content
+                                            )
+                                            more.value = true
+                                        }) {
+                                        vm.act {
+                                            FeedAction.OpenReplyScreen(
+                                                buildAnnotatedString {
+                                                    pushStyle(SpanStyle(color = themeColor))
+                                                    append(item.author.username)
+                                                    pop()
+                                                    append(":")
+                                                    append(item.content)
+                                                },
+                                                item.id
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(Gap.Big))
+                                if (feed != null) {
+                                    when (vm.state.feedState) {
+                                        FourState.Idle(true) -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .aspectRatio(4f),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = if (cmt.isEmpty()) string(R.string.no_comment)
+                                                    else string(R.string.comment_count, cmt.size),
+                                                    color = colors.textSecondary,
+                                                    fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+
+                                        FourState.Idle(false) -> {
+                                            GetMoreButton(
+                                                id = id,
+                                                commentDesc = commentDesc
+                                            )
+                                        }
+
+                                        else -> {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth(),
+                                                Arrangement.Center
+                                            ) {
+                                                LoadingBar()
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(Gap.Big))
+                                Spacer(modifier = Modifier.height(Gap.Big))
+                                Spacer(modifier = Modifier.height(Gap.Big))
+                            }
+                        }
+                        PullRefreshIndicator(
+                            refreshing = isRefresh,
+                            state = refreshState,
+                            contentColor = themeColor
+                        )
+                    }
+
+                    if (feed != null && finished.value) {
+                        Row(Modifier
+                            .drawColoredShadow(
+                                Color.Black.copy(alpha = 0.5f),
+                                alpha = 0.1f,
+                                shadowRadius = 12.dp,
+                                roundedRect = false
+                            )
+                            .background(colors.card)
+                            .clickable {
+                                feed.let {
+                                    vm.act {
+                                        FeedAction.OpenReplyScreen(
+                                            buildAnnotatedString {
+                                                pushStyle(SpanStyle(color = themeColor))
+                                                append(it.author.username)
+                                                pop()
+                                                append(":")
+                                                append(it.content)
+                                            },
+                                            null
+                                        )
                                     }
                                 }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(Gap.Big))
-                        Spacer(modifier = Modifier.height(Gap.Big))
-                        Spacer(modifier = Modifier.height(Gap.Big))
-                    }
-                }
-                    PullRefreshIndicator(
-                        refreshing = isRefresh,
-                        state = refreshState,
-                        contentColor = themeColor
-                    )
-                }
-
-                if (feed != null && finished.value) {
-                    Row(Modifier
-                        .drawColoredShadow(
-                            Color.Black.copy(alpha = 0.5f),
-                            alpha = 0.1f,
-                            shadowRadius = 12.dp,
-                            roundedRect = false
-                        )
-                        .background(colors.card)
-                        .clickable {
-                            feed.let {
-                                TODO("回复帖子")
-                            }
-                        }
-                        .fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(modifier = Modifier.width(Gap.Big))
-                        EasyImage(
-                            src = R.drawable.edit_fill,
-                            contentDescription = "",
-                            modifier = Modifier
-                                .size(ImageSize.Mid)
-                                .padding(Gap.Small),
-                            tint = colors.textSecondary
-                        )
-                        Spacer(modifier = Modifier.height(ImageSize.Normal))
-                        Text(
-                            text = comment.value.ifBlank { string(R.string.comment) },
-                            color = colors.textSecondary,
-                            fontSize = 14.sp,
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        val replyCount = feed.reply_count
-                        Column(modifier = Modifier
-                            .clickable {
-                                scope.launch {
-                                    vm.state.listState.animateScrollTo(if (toReply.value) viewHeight.intValue + 100 else 0)
-                                    toReply.value = toReply.value.toggle
-                                }
-                            }
-                            .padding(horizontal = Gap.Big, vertical = Gap.Mid),
-                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            .fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Spacer(modifier = Modifier.width(Gap.Big))
                             EasyImage(
-                                src = R.drawable.comment,
-                                contentDescription = if (replyCount == 0) string(
-                                    R.string.reply
-                                )
-                                else replyCount.toString(10),
+                                src = R.drawable.edit_fill,
+                                contentDescription = "",
                                 modifier = Modifier
                                     .size(ImageSize.Mid)
                                     .padding(Gap.Small),
                                 tint = colors.textSecondary
                             )
+                            Spacer(modifier = Modifier.height(ImageSize.Normal))
                             Text(
-                                text = if (replyCount == 0) string(R.string.reply)
-                                else replyCount.toString(10),
+                                text = comment.value.ifBlank { string(R.string.comment) },
                                 color = colors.textSecondary,
-                                fontSize = 10.sp,
+                                fontSize = 14.sp,
                             )
-                        }
-                        val liked = feed.liked
-                        Column(modifier = Modifier
-                            .clickable {
-                                vm.act {
-                                    FeedAction.LikePost() {}
+                            Spacer(modifier = Modifier.weight(1f))
+                            val replyCount = feed.reply_count
+                            Column(modifier = Modifier
+                                .clickable {
+                                    scope.launch {
+                                        vm.state.listState.animateScrollTo(if (toReply.value) viewHeight.intValue + 100 else 0)
+                                        toReply.value = toReply.value.toggle
+                                    }
                                 }
+                                .padding(horizontal = Gap.Big, vertical = Gap.Mid),
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                EasyImage(
+                                    src = R.drawable.comment,
+                                    contentDescription = if (replyCount == 0) string(
+                                        R.string.reply
+                                    )
+                                    else replyCount.toString(10),
+                                    modifier = Modifier
+                                        .size(ImageSize.Mid)
+                                        .padding(Gap.Small),
+                                    tint = colors.textSecondary
+                                )
+                                Text(
+                                    text = if (replyCount == 0) string(R.string.reply)
+                                    else replyCount.toString(10),
+                                    color = colors.textSecondary,
+                                    fontSize = 10.sp,
+                                )
                             }
-                            .padding(horizontal = Gap.Big, vertical = Gap.Mid),
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            EasyImage(
-                                src = if (liked) R.drawable.thumb_up_fill else R.drawable.thumb_up_line,
-                                contentDescription = if (liked) string(R.string.liked) else string(R.string.like),
-                                modifier = if (liked) {
-                                    Modifier.gradient()
-                                } else {
-                                    Modifier
+                            val liked = feed.liked
+                            Column(modifier = Modifier
+                                .clickable {
+                                    vm.act {
+                                        FeedAction.LikePost() {}
+                                    }
                                 }
-                                    .size(ImageSize.Mid)
-                                    .padding(Gap.Small),
-                                tint = if (liked) null else colors.textSecondary
-                            )
-                            Text(
-                                text = (feed.like_count).toString(10),
-                                color = if (liked) colors.secondary else colors.textSecondary,
-                                fontSize = 10.sp,
-                            )
-                        }
-                        val stared = feed.favorite
-                        Column(modifier = Modifier
-                            .clickable {
-                                vm.act {
-                                    FeedAction.StarPost() {}
-                                }
+                                .padding(horizontal = Gap.Big, vertical = Gap.Mid),
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                EasyImage(
+                                    src = if (liked) R.drawable.thumb_up_fill else R.drawable.thumb_up_line,
+                                    contentDescription = if (liked) string(R.string.liked) else string(
+                                        R.string.like
+                                    ),
+                                    modifier = if (liked) {
+                                        Modifier.gradient()
+                                    } else {
+                                        Modifier
+                                    }
+                                        .size(ImageSize.Mid)
+                                        .padding(Gap.Small),
+                                    tint = if (liked) null else colors.textSecondary
+                                )
+                                Text(
+                                    text = (feed.like_count).toString(10),
+                                    color = if (liked) colors.secondary else colors.textSecondary,
+                                    fontSize = 10.sp,
+                                )
                             }
-                            .padding(horizontal = Gap.Big, vertical = Gap.Mid),
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            EasyImage(
-                                src = if (stared) R.drawable.star_fill else R.drawable.star_line,
-                                contentDescription = if (stared) string(R.string.marked) else string(
-                                    R.string.mark
-                                ),
-                                modifier = Modifier
-                                    .size(ImageSize.Mid)
-                                    .padding(Gap.Small),
-                                tint = if (stared) colors.secondary else colors.textSecondary
-                            )
-                            Text(
-                                text = if (stared) string(R.string.marked) else string(R.string.mark),
-                                color = if (stared) colors.secondary else colors.textSecondary,
-                                fontSize = 10.sp,
-                            )
+                            val stared = feed.favorite
+                            Column(modifier = Modifier
+                                .clickable {
+                                    vm.act {
+                                        FeedAction.StarPost() {}
+                                    }
+                                }
+                                .padding(horizontal = Gap.Big, vertical = Gap.Mid),
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                EasyImage(
+                                    src = if (stared) R.drawable.star_fill else R.drawable.star_line,
+                                    contentDescription = if (stared) string(R.string.marked) else string(
+                                        R.string.mark
+                                    ),
+                                    modifier = Modifier
+                                        .size(ImageSize.Mid)
+                                        .padding(Gap.Small),
+                                    tint = if (stared) colors.secondary else colors.textSecondary
+                                )
+                                Text(
+                                    text = if (stared) string(R.string.marked) else string(R.string.mark),
+                                    color = if (stared) colors.secondary else colors.textSecondary,
+                                    fontSize = 10.sp,
+                                )
+                            }
                         }
                     }
                 }
             }
-            //ReplyScreen（） MenuSurface(more, id, replyMore.value)
+        }
     }
 }
 
@@ -491,7 +528,8 @@ fun FeedScreen(
 private fun GetMoreButton(
     vm: FeedViewModel = viewModel(),
     id: String,
-    commentDesc:Int) {
+    commentDesc: CommentDesc
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth(),
@@ -508,7 +546,7 @@ private fun GetMoreButton(
                     vm.act(
                         FeedAction.GetMoreReplies(
                             id = id,
-                            sort = commentDesc,
+                            commentDesc = commentDesc,
                             state = FourState.OnMore
                         )
                     )
@@ -583,13 +621,89 @@ private fun UserCard(
     }
 }
 
+@Composable
+fun BottomSliders(
+    nav: NavHostController,
+    vm: FeedViewModel = viewModel(),
+    content: @Composable () -> Unit
+) {
+    val bottomSheetDialog = LocalBottomDialog.current
+    val draggable = remember {
+        mutableStateOf(true)
+    }
+    val state = remember {
+        BottomSheetDialogState(BottomSheetDialogValue.Collapsed)
+    }
+    LaunchedEffect(key1 = vm.state.popupController.showSubCommentsScreen) {
+        if(!vm.state.popupController.showSubCommentsScreen){
+            delay(100)
+            state.collapse()
+        }
+    }
+    val showBottomSheet = remember {
+        ShowBottomSheet(
+            {
+                vm.act {
+                    FeedAction.CloseSubCommentScreen
+                }
+            },
+            mutableStateOf(true),
+            state,
+            content = { onDismiss ->
+                SubCommentScreen(
+                    draggable = draggable,
+                    state = state,
+                    sid = vm.state.subCommentId
+                ) {
+                    onDismiss()
+                }
+            }
+        )
+    }
+    ReplyScreen(
+        onSuccess = {
+            vm.act {
+                FeedAction.GetMoreReplies(
+                    id = vm.state.feed?.id ?: "", commentDesc = vm.state.commentDesc,
+                    state = FourState.OnMore
+                )
+            }
+        }
+    ) {
+        bottomSheetDialog.Build(
+            show = vm.state.popupController.showSubCommentsScreen,
+            state = showBottomSheet
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun Dialogs(
+    nav: NavHostController,
+    content: @Composable () -> Unit
+) {
+    val dialog = remember {
+        AppDialog().apply {
+
+        }
+    }
+    dialog.Build(show = false, onDismissRequest = {
+
+    }) {
+        content()
+    }
+
+}
+
 /**
  * 用户评论
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CommentCard(
-    post: RepliesQuery.Reply,
+    comment: RepliesQuery.Reply,
     author: String?,
     vm: FeedViewModel = viewModel(),
     onLike: (Boolean) -> Unit,
@@ -597,7 +711,8 @@ fun CommentCard(
     onLongClick: () -> Unit,
     onClick: () -> Unit
 ) {
-    val comments = post.sub_reply ?: emptyList()
+    val bottomSheetDialog = LocalBottomDialog.current
+    val comments = comment.sub_reply ?: emptyList()
     Column(Modifier
         .background(colors.card)
         .fillMaxWidth()
@@ -606,7 +721,7 @@ fun CommentCard(
         Row(
             modifier = Modifier.padding(bottom = Gap.Zero)
         ) {
-            LazyImage(src = post.author.avatar,
+            LazyImage(src = comment.author.avatar,
                 contentDescription = stringResource(id = R.string.avatar),
                 modifier = Modifier
                     .click {
@@ -623,13 +738,13 @@ fun CommentCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = post.author.username + if (post.author.id == author) string(R.string.post_master) else "",
+                        text = comment.author.username + if (comment.author.id == author) string(R.string.post_master) else "",
                         color = colors.primary,
                         fontSize = 14.sp,
                     )
                     Spacer(modifier = Modifier.width(Gap.Mid))
                     //BB鸡的AI提醒
-                    if (post.author.id == "6422d2016f6eee4d08cf38ad")
+                    if (comment.author.id == "6422d2016f6eee4d08cf38ad")
                         Text(
                             text = "机器人",
                             fontSize = 11.sp,
@@ -639,19 +754,19 @@ fun CommentCard(
                                 .padding(Gap.Small, Gap.Tiny)
                         )
                 }
-                val humanized = post.time.formatHumanized
-                val detail = post.time.formatDateTime
+                val humanized = comment.time.formatHumanized
+                val detail = comment.time.formatDateTime
                 val state = remember {
                     mutableStateOf(true)//时间相同显示发布时间
                 }
                 //内容
 //                Text(post.content.removeImages)
                 Text(
-                    text = post.content.removeImages,
+                    text = comment.content.removeImages,
                     color = colors.textPrimary,
                 )
                 //图片
-                val images = post.content.pickImages
+                val images = comment.content.pickImages
                 if (images.isNotEmpty()) {
                     StaggeredVerticalGrid(
                         maxRows = 4, modifier = Modifier.fillMaxWidth()
@@ -680,11 +795,11 @@ fun CommentCard(
                             state.value = !state.value
                         })
                     Spacer(modifier = Modifier.weight(1f))
-                    val liked = post.liked
+                    val liked = comment.liked
                     ActionItem(modifier = if (liked) Modifier.gradient() else Modifier,
                         action = ActionData(
                             src = if (liked) R.drawable.thumb_up_fill else R.drawable.thumb_up_line,
-                            value = post.like_count.toString(10),
+                            value = comment.like_count.toString(10),
                             color = if (liked) null else colors.textPrimary
                         ) {
                             onLike(liked)
@@ -710,9 +825,14 @@ fun CommentCard(
                         comments.forEachIndexed { index, it ->
                             if (comments.size - index <= 3) {
                                 SubCommentCard(
-                                    modifier = Modifier, author = author, parent = post, post = it
+                                    modifier = Modifier,
+                                    author = author,
+                                    parent = comment,
+                                    post = it
                                 ) {
-                                    TODO(" vm.send(FeedViewModel.Intent.ReadMore(post.id))")
+                                    vm.act {
+                                        FeedAction.OpenSubCommentsScreen(comment.id)
+                                    }
                                 }
                             }
                         }
@@ -728,7 +848,10 @@ fun CommentCard(
                                 fontSize = 14.sp,
                                 modifier = Modifier
                                     .clickable {
-                                        TODO("vm.send(FeedViewModel.Intent.ReadMore(post.id))")
+
+                                        vm.act {
+                                            FeedAction.OpenSubCommentsScreen(comment.id)
+                                        }
                                     }
                                     .fillMaxWidth()
                                     .padding(horizontal = Gap.Big, vertical = Gap.Small))

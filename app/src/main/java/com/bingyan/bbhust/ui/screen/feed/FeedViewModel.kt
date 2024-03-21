@@ -5,14 +5,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.viewModelScope
+import com.apollographql.apollo3.api.Optional
+import com.bingyan.bbhust.AddCommentMutation
 import com.bingyan.bbhust.FavoritePostMutation
 import com.bingyan.bbhust.LikePostMutation
 import com.bingyan.bbhust.LikeReplyMutation
 import com.bingyan.bbhust.PostQuery
 import com.bingyan.bbhust.R
 import com.bingyan.bbhust.RepliesQuery
+import com.bingyan.bbhust.ReplyQuery
 import com.bingyan.bbhust.base.BaseViewModel
 import com.bingyan.bbhust.base.FourState
+import com.bingyan.bbhust.base.TriState
+import com.bingyan.bbhust.type.AddReplyInput
 import com.bingyan.bbhust.type.FavoritePostInput
 import com.bingyan.bbhust.type.LikePostInput
 import com.bingyan.bbhust.type.LikeReplyInput
@@ -23,11 +28,14 @@ import com.bingyan.bbhust.utils.string
 import com.bingyan.bbhust.utils.suspendUpdate
 import com.bingyan.bbhust.utils.update
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 
 const val REPLIES_LIMIT = 20
@@ -35,6 +43,22 @@ const val LANDLORD_LIMIT = 100
 const val TIMELINE = 1
 const val NEWLINE = -1
 const val LANDLORD = 0
+
+/**
+ * 回复列表的顺序
+ * @param pullOrder 该列表从网络拉取时的顺序，1为时间顺序，-1为最新顺序
+ * @param limit 该列表每次拉取的限制
+ */
+enum class CommentDesc(val pullOrder: Int, val limit: Int) {
+    //时间顺序
+    TimeOrder(1, 20),
+
+    //最新顺序
+    NewOrder(-1, 20),
+
+    //只看楼主
+    LandlordOrder(1, 50)
+}
 
 class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
     override fun reduce(action: FeedAction): FeedState {
@@ -74,74 +98,11 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
                 state.copy(
                     feedState = action.state
                 ).then {
-                    viewModelScope.launch {
-                        when (action.sort) {
-                            TIMELINE, LANDLORD -> {
-                                state.then {
-                                    val time =
-                                        if (state.timelineList.isEmpty()) "0"
-                                        else state.timelineList.last().time
-                                    val limit =
-                                        if (action.sort == TIMELINE) REPLIES_LIMIT
-                                        else LANDLORD_LIMIT
-                                    val sort = TIMELINE
-                                    apollo().query(
-                                        RepliesQuery(
-                                            action.id,
-                                            time,
-                                            limit,
-                                            sort
-                                        )
-                                    )
-                                        .toFlow()
-                                        .onSuccess { new ->
-                                            state.addToList(
-                                                action.sort,
-                                                new.replies
-                                            )
-                                        }
-                                        .defaultErrorHandler {
-                                            state.copy(feedState = FourState.Error(it)).update()
-                                        }
-                                        .onCompletion {
-                                            action.onCompletion?.let { it1 -> it1() }
-                                        }
-                                        .launchIn(viewModelScope).start()
-                                }
-                            }
-
-                            NEWLINE -> {
-                                state.then {
-                                    val time =
-                                        if (state.newlineList.isEmpty()) "${Int.MAX_VALUE}"
-                                        else state.newlineList.last().time
-                                    val limit = REPLIES_LIMIT
-                                    val sort = NEWLINE
-                                    apollo().query(
-                                        RepliesQuery(
-                                            action.id,
-                                            time,
-                                            limit,
-                                            sort    //只看楼主与时间轴共用一个表
-                                        )
-                                    ).toFlow()
-                                        .onSuccess { new ->
-                                            state.addToList(
-                                                action.sort,
-                                                new.replies
-                                            )
-                                        }
-                                        .defaultErrorHandler {
-                                            state.copy(feedState = FourState.Error(it)).update()
-                                        }
-                                        .onCompletion {
-                                            action.onCompletion?.let { it1 -> it1() }
-                                        }
-                                        .launchIn(viewModelScope).start()
-                                }
-                            }
-                        }
-                    }
+                    getNewReplies(
+                        action.id,
+                        action.commentDesc,
+                        action.onCompletion
+                    )
                 }
             }
 
@@ -164,8 +125,14 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
                             )
                         ).toFlow()
                             .onSuccess {
-                                val newPost = if(post.liked) post.copy(liked = !post.liked, like_count = post.like_count-1)
-                                else post.copy(liked = !post.liked, like_count = post.like_count+1)
+                                val newPost = if (post.liked) post.copy(
+                                    liked = !post.liked,
+                                    like_count = post.like_count - 1
+                                )
+                                else post.copy(
+                                    liked = !post.liked,
+                                    like_count = post.like_count + 1
+                                )
                                 state.copy(feed = newPost).update()
                             }
                             .onCompletion {
@@ -209,29 +176,30 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
                             )
                         ).toFlow()
                             .onSuccess {
-                                val newList =
-                                    if (state.commentDesc == NEWLINE)
-                                        state.newlineList.toMutableList()
-                                    else
-                                        state.timelineList.toMutableList()
-                                newList.update(
-                                    filter = {
-                                        it.id == action.id
-                                    },
-                                    update = {
-                                        val newReply =
-                                            if(action.like) it.copy(liked = action.like, like_count = it.like_count+1)
-                                            else it.copy(liked = action.like, like_count = it.like_count-1)
-                                        newReply
+                                val commentDesc = state.commentDesc
+                                val newList = state.replies[commentDesc]!!
+                                    .mapIndexed {_, reply ->
+                                        if(reply.id==action.id){
+                                            val newReply =
+                                                if (action.like) reply.copy(
+                                                    liked = action.like,
+                                                    like_count = reply.like_count + 1
+                                                )
+                                                else reply.copy(
+                                                    liked = action.like,
+                                                    like_count = reply.like_count - 1
+                                                )
+                                            newReply
+                                        }else{
+                                            reply
+                                        }
                                     }
-                                )
-                                if (state.commentDesc == NEWLINE)
-                                    state.copy(newlineList = newList).update()
-                                else
-                                    state.copy(timelineList = newList).update()
+                                state.copy(
+                                    replies = state.replies.apply { put(commentDesc, newList) },
+                                ).update()
                             }
                             .onCompletion {
-                                state.refreshReply(
+                                refreshReply(
                                     state.feed?.id ?: "",
                                     action.id,
                                     action.commentDesc
@@ -248,77 +216,151 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
             }
 
             is FeedAction.Publish -> {
-                state
+                state.then {
+                    val feedId = state.feed?.id ?: return state.copy(
+                        feedState = FourState.Error(
+                            string(R.string.unknown_feed)
+                        )
+                    )
+                    val id = action.replyAt ?: feedId
+                    val reply = state.reply[id] ?: return state.copy(
+                        feedState = FourState.Error(
+                            string(R.string.upload_failed)
+                        )
+                    )
+                    val text = reply.content.value.text.trim()
+                    if (text.isNotBlank()) {
+                        val input = AddReplyInput(
+                            content = text,
+                            post = reply.post,
+                            reply_at = Optional.presentIfNotNull(reply.replyAt)
+                        )
+                        viewModelScope.launch {
+                            apollo().mutation(
+                                AddCommentMutation(
+                                    input
+                                )
+                            ).toFlow()
+                                .onSuccess {
+                                    action.onSuccess()
+                                }
+                                .onCompletion {
+                                    state.then {
+                                        val newReply = state.reply.toMutableMap()
+                                        newReply.remove(id)
+                                        state.copy(isReply = false, reply = newReply.toMap()).then {
+                                            if (id == feedId)
+                                                getNewReplies(
+                                                    feedId = feedId,
+                                                    commentDesc = state.commentDesc
+                                                )
+                                            else
+                                                refreshReply(
+                                                    feedId = feedId,
+                                                    replyId = id,
+                                                    commentDesc = state.commentDesc
+                                                )
+                                        }
+                                        delay(500)
+                                        action.onCompletion()
+                                    }
+                                }
+                                .defaultErrorHandler {
+                                    action.onFailed()
+                                    state.copy(
+                                        feedState = FourState.Error(it)
+                                    ).update()
+                                }
+                                .launchIn(viewModelScope).start()
+                        }
+                    } else {
+                        action.onFailed()
+                    }
+                }
             }
 
             is FeedAction.ReadMore -> {
                 state
             }
 
+            is FeedAction.OpenReplyScreen -> {
+                state.then {
+                    val feedId = state.feed?.id ?: return state.copy(
+                        feedState = FourState.Error(
+                            string(R.string.unknown_feed)
+                        )
+                    )
+                    val replyAt = action.replyAt ?: feedId
+                    val reply = state.reply[replyAt]
+                    if (reply == null) {
+                        val replyNew = Reply(
+                            post = feedId,
+                            span = action.span,
+                            replyAt = action.replyAt
+                        )
+                        val newReplyMap = state.reply.toMutableMap()
+                        newReplyMap[replyAt] = replyNew
+                        state.copy(
+                            reply = newReplyMap.toMap(),
+                            replyCurrent = replyNew
+                        ).update()
+                    } else {
+                        state.copy(
+                            replyCurrent = reply
+                        ).update()
+                    }
+                    state.copy(
+                        isReply = true
+                    ).update()
+                }
+            }
+
             is FeedAction.RefreshAll -> {
                 state.copy(
-                    commentDesc = action.commentDesc,
-                    feedState = action.feedState
+                    feedState = FourState.Loading
                 ).then {
                     viewModelScope.launch {
-                        if (action.feedState==FourState.Loading)
-                            delay(500)
-                        when (action.commentDesc) {
-                            TIMELINE, LANDLORD -> {
-                                val time = "0"
-                                val limit = state.timelineList.size + REPLIES_LIMIT
-                                val sort = TIMELINE
-                                apollo().query(
-                                    RepliesQuery(
-                                        action.id,
-                                        time,
-                                        limit,
-                                        sort
-                                    )
-                                )
-                                    .toFlow()
-                                    .onSuccess { new ->
-                                        state.copy(
-                                            feedState = FourState.Idle(false),
-                                            timelineList = new.replies
-                                        ).update()
-                                    }
-                                    .onCompletion {
-                                        action.onCompletion
-                                    }
-                                    .defaultErrorHandler {
-                                        state.copy(feedState = FourState.Error(it)).update()
-                                    }
-                                    .launchIn(viewModelScope).start()
-                            }
+                        delay(500)
+                        viewModelScope.launch {
+                            val commentDesc = state.commentDesc
+                            val feedId = action.id
+                            val repliesList = state.replies[commentDesc]!!
+                            val time = when (commentDesc) {
+                                CommentDesc.TimeOrder -> {
+                                    "0"
+                                }
+                                CommentDesc.NewOrder -> {
+                                    "${Int.MAX_VALUE}"
+                                }
 
-                            NEWLINE -> {
-                                val time = "${Int.MAX_VALUE}"
-                                val limit = state.timelineList.size
-                                val sort = NEWLINE
-                                apollo().query(
-                                    RepliesQuery(
-                                        action.id,
-                                        time,
-                                        limit,
-                                        sort
-                                    )
-                                ).toFlow()
-                                    .onSuccess { new ->
-                                                state.copy(
-                                                    feedState = FourState.Idle(false),
-                                                    newlineList = new.replies
-                                                ).update()
-
-                                    }
-                                    .defaultErrorHandler {
-                                        state.copy(feedState = FourState.Error(it)).update()
-                                    }
-                                    .launchIn(viewModelScope).start()
+                                CommentDesc.LandlordOrder -> {
+                                    "0"
+                                }
                             }
+                            val limit = repliesList.size + commentDesc.limit
+                            val pullOrder = commentDesc.pullOrder
+                            apollo().query(RepliesQuery(feedId, time, limit, pullOrder))
+                                .toFlow()
+                                .onSuccess { new ->
+                                    new.replies.changeRepliesList(commentDesc)
+                                }
+                                .defaultErrorHandler {
+                                    state.copy(feedState = FourState.Error(it)).update()
+                                }
+                                .onCompletion {
+                                    action.onCompletion?.invoke()
+                                }
+                                .launchIn(viewModelScope).start()
                         }
                     }
                 }
+            }
+
+            is FeedAction.RefreshNew -> {
+                state.copy(
+                    commentDesc = action.commentDesc,
+                    feedState = FourState.Loading
+                )
             }
 
             is FeedAction.StarPost -> {
@@ -339,6 +381,10 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
                                 )
                             )
                         ).toFlow()
+                            .onSuccess {
+                                val newPost = post.copy(favorite = !post.favorite)
+                                state.copy(feed = newPost).update()
+                            }
                             .onCompletion {
                                 apollo().query(PostQuery(post.id))
                                     .toFlow()
@@ -353,6 +399,7 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
                                             feedState = FourState.Error(it)
                                         ).update()
                                     }
+                                    .launchIn(viewModelScope).start()
                             }
                             .defaultErrorHandler {
                                 state.copy(feedState = FourState.Error(it)).then {
@@ -367,30 +414,37 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
             is FeedAction.UploadImage -> {
                 state
             }
+
+            is FeedAction.CloseSubCommentScreen -> {
+                state.copy(
+                    popupController = state.popupController.copy(showSubCommentsScreen = false),
+                    subCommentId = null
+                )
+            }
+            is FeedAction.OpenSubCommentsScreen -> {
+                state.copy(
+                    popupController = state.popupController.copy(showSubCommentsScreen = true),
+                    subCommentId = action.subCommentId
+                )
+            }
         }
     }
 
     /**
      * 根据replyId（可以是一级回复或二级回复）刷新该一级回复
      */
-    private fun FeedState.refreshReply(feedId: String, replyId: String, commentDesc: Int) {
+    private fun refreshReply(feedId: String, replyId: String, commentDesc: CommentDesc) {
         viewModelScope.launch {
-            val newList =
-                if (commentDesc == NEWLINE)
-                    state.newlineList.toMutableList()
-                else
-                    state.timelineList.toMutableList()
+            val newList = state.replies[commentDesc]!!.toMutableList()
             newList.suspendUpdate(
                 filter = {
                     it.id == replyId || it.sub_reply?.any { subReply -> subReply.id == replyId } == true
                 },
-                update = { it,lit->
+                update = { it, lit ->
                     val time =
-                        if(commentDesc== NEWLINE) (it.time.toInt() + 1).toString()
-                        else (it.time.toInt()-1).toString()
-                    val sort =
-                        if(commentDesc== NEWLINE) NEWLINE
-                        else TIMELINE
+                        if (commentDesc == CommentDesc.NewOrder) (it.time.toInt() + 1).toString()
+                        else (it.time.toInt() - 1).toString()
+                    val sort = commentDesc.pullOrder
                     apollo().query(
                         RepliesQuery(feedId, time, 5, sort)
                     ).toFlow()
@@ -404,10 +458,11 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
                             }
                         }
                         .onCompletion {
-                            if (commentDesc == NEWLINE)
-                                copy(newlineList = newList.toList()).update()
-                            else
-                                copy(timelineList = newList.toList()).update()
+                            state.copy(
+                                replies = state.replies.apply {
+                                    put(commentDesc, newList.toList())
+                                }
+                            ).update()
                         }
                         .defaultErrorHandler {
                             state.copy(
@@ -421,96 +476,78 @@ class FeedViewModel : BaseViewModel<FeedState, FeedAction>(FeedState()) {
     }
 
     /**
-     * 在发布一级评论后进行刷新
+     * 获取新回复
      */
-    private fun FeedState.refreshNew(feedId: String, id: String, commentDesc: Int) {
+    private fun getNewReplies(
+        feedId: String, commentDesc: CommentDesc,
+        onCompletion: (suspend () -> Unit)? = null
+    ) {
         viewModelScope.launch {
-            when (commentDesc) {
-                TIMELINE, LANDLORD -> {
-                    state.then {
-                        val time =
-                            if (state.timelineList.isEmpty()) "0"
-                            else state.timelineList.last().time
-                        val limit =
-                            if (commentDesc == TIMELINE) REPLIES_LIMIT
-                            else LANDLORD_LIMIT
-                        val sort = TIMELINE
-                        apollo().query(RepliesQuery(feedId, time, limit, sort))
-                            .toFlow()
-                            .onSuccess { new ->
-                                addToList(
-                                    commentDesc,
-                                    new.replies
-                                )
-                            }
-                            .defaultErrorHandler {
-                                state.copy(feedState = FourState.Error(it)).update()
-                            }
-                            .launchIn(viewModelScope).start()
-                    }
+            delay(500)
+            val repliesList = state.replies[commentDesc]!!
+            val time = when (commentDesc) {
+                CommentDesc.TimeOrder -> {
+                    if (repliesList.isEmpty()) "0"
+                    else repliesList.last().time
                 }
 
-                NEWLINE -> {
-                    val time = "${Int.MAX_VALUE}"
-                    val limit = REPLIES_LIMIT
-                    val sort = NEWLINE
-                    apollo().query(RepliesQuery(feedId, time, limit, sort))
-                        .toFlow()
-                        .onSuccess { new ->
-                            state.copy(newlineList = new.replies + newlineList).update()
-                        }
-                        .defaultErrorHandler {
-                            state.copy(feedState = FourState.Error(it)).update()
-                        }
-                        .launchIn(viewModelScope).start()
+                CommentDesc.NewOrder -> {
+                    if (repliesList.isEmpty()) "${Int.MAX_VALUE}"
+                    else repliesList.last().time
+                }
+
+                CommentDesc.LandlordOrder -> {
+                    if (repliesList.isEmpty()) "0"
+                    else repliesList.last().time
                 }
             }
+            val limit = commentDesc.limit
+            val pullOrder = commentDesc.pullOrder
+            apollo().query(RepliesQuery(feedId, time, limit, pullOrder))
+                .toFlow()
+                .onSuccess { new ->
+                    (repliesList+new.replies).changeRepliesList(commentDesc)
+                }
+                .defaultErrorHandler {
+                    state.copy(feedState = FourState.Error(it)).update()
+                }
+                .onCompletion {
+                    onCompletion?.invoke()
+                }
+                .launchIn(viewModelScope).start()
         }
     }
 
-    private fun FeedState.addToList(
-        type: Int,
-        newList: List<RepliesQuery.Reply>
+    private fun List<RepliesQuery.Reply>.changeRepliesList(
+        commentDesc: CommentDesc
     ) {
-        when (type) {
-            TIMELINE -> {
-                if (newList.size < REPLIES_LIMIT)
-                    copy(
-                        timelineList = timelineList + newList,
-                        feedState = FourState.Idle(true)
-                    ).update()
-                else
-                    copy(
-                        timelineList = timelineList + newList,
-                        feedState = FourState.Idle(false)
-                    ).update()
+        val oldList = state.replies[commentDesc]!!
+        //筛选只看楼主
+        val list = when (commentDesc) {
+            CommentDesc.LandlordOrder -> {
+                this.apply {
+                    filter { reply ->
+                        state.feed?.let {
+                            reply.author.id == it.author.id
+                        } ?: true
+                    }
+                }
             }
-
-            NEWLINE -> {
-                if (newList.size < REPLIES_LIMIT)
-                    copy(
-                        newlineList = newlineList + newList,
-                        feedState = FourState.Idle(true)
-                    ).update()
-                else
-                    copy(
-                        newlineList = newlineList + newList,
-                        feedState = FourState.Idle(false)
-                    ).update()
+            else -> {
+                this
             }
-
-            LANDLORD -> {
-                if (newList.size < LANDLORD_LIMIT)
-                    copy(
-                        timelineList = timelineList + newList,
-                        feedState = FourState.Idle(true)
-                    ).update()
-                else
-                    copy(
-                        timelineList = timelineList + newList,
-                        feedState = FourState.Idle(false)
-                    ).update()
-            }
+        }
+        //判断此时是否有更多
+        if (this.size - oldList.size < commentDesc.limit) {
+            state.copy(
+                replies = state.replies.apply { put(commentDesc, list)},
+                feedState = FourState.Idle(true)
+            ).update()
+        }else{
+            state.copy(
+                replies = state.replies.apply { put(commentDesc, list) },
+                feedState = FourState.Idle(false)
+            ).update()
         }
     }
 

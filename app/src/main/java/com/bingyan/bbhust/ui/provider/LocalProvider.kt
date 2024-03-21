@@ -7,6 +7,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavHostController
 import com.bingyan.bbhust.ui.viewer.ImageViewerManger
 import com.bingyan.bbhust.ui.widgets.AppDialog
+import com.bingyan.bbhust.ui.widgets.AppLoading
 import com.bingyan.bbhust.ui.widgets.SnackHostState
 import com.bingyan.bbhust.ui.widgets.sheet.AppBottomSheetDialog
 
@@ -29,3 +30,4 @@ val LocalShare = localStaticProvider<ShareProvider>()
 val LocalSnack = localProvider<SnackHostState>()
 val LocalDialog = localProvider<AppDialog>()
 val LocalBottomDialog = localProvider<AppBottomSheetDialog>()
+val LocalLoading = localProvider<AppLoading>()
