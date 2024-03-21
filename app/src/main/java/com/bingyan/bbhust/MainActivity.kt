@@ -11,15 +11,19 @@ import com.bingyan.bbhust.ui.provider.AppUriHandler
 import com.bingyan.bbhust.ui.provider.LocalBottomDialog
 import com.bingyan.bbhust.ui.provider.LocalDialog
 import com.bingyan.bbhust.ui.provider.LocalGalley
+import com.bingyan.bbhust.ui.provider.LocalLoading
 import com.bingyan.bbhust.ui.provider.LocalNav
 import com.bingyan.bbhust.ui.provider.LocalPicker
 import com.bingyan.bbhust.ui.provider.LocalShare
+import com.bingyan.bbhust.ui.provider.LocalSnack
 import com.bingyan.bbhust.ui.provider.Picker
 import com.bingyan.bbhust.ui.provider.ShareProvider
 import com.bingyan.bbhust.ui.theme.AppTheme
 import com.bingyan.bbhust.ui.viewer.ImageViewerManger
 import com.bingyan.bbhust.ui.widgets.AppDialog
+import com.bingyan.bbhust.ui.widgets.AppLoading
 import com.bingyan.bbhust.ui.widgets.AppSnack
+import com.bingyan.bbhust.ui.widgets.Snack
 import com.bingyan.bbhust.ui.widgets.sheet.AppBottomSheetDialog
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 
@@ -42,13 +46,14 @@ class MainActivity : ComponentActivity() {
                 LocalGalley provides imageViewerManger,
                 LocalShare provides ShareProvider(),
                 LocalDialog provides AppDialog(),
-                LocalBottomDialog provides AppBottomSheetDialog()
+                LocalBottomDialog provides AppBottomSheetDialog(),
+                LocalLoading provides AppLoading()
             ) {
                 AppTheme {
-                    val bottomSheetDialog = LocalBottomDialog.current
+                    val loading = LocalLoading.current
                     AppSnack {
                         AppNav(nav)
-                        bottomSheetDialog.Build(nav = nav)
+                        loading.Build()
                     }
                 }
             }
