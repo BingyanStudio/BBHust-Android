@@ -95,10 +95,10 @@ fun NavGraphBuilder.animateCompose(
             slideInHorizontally(initialOffsetX = { it }, animationSpec = animation)
         },
         exitTransition = {
-            slideOutHorizontally(targetOffsetX = { -it / 2 }, animationSpec = animation)
+            slideOutHorizontally(targetOffsetX = { -it  }, animationSpec = animation)
         },
         popEnterTransition = {
-            slideInHorizontally(initialOffsetX = { -it / 2 }, animationSpec = animation)
+            slideInHorizontally(initialOffsetX = { -it }, animationSpec = animation)
         },
         popExitTransition = {
             slideOutHorizontally(targetOffsetX = { it }, animationSpec = animation)
